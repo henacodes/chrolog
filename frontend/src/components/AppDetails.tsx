@@ -18,6 +18,7 @@ import {
 interface AppDetailsProps {
   appId: string
   appName: string
+  appIcon?: string
   onBack: () => void
 }
 
@@ -40,7 +41,7 @@ interface SessionRecord {
 // Access Wails runtime & Go methods
 const wails = (window as any).go?.main?.App
 
-export function AppDetails({ appId, appName, onBack }: AppDetailsProps) {
+export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps) {
   const [stats, setStats] = useState<AppUsageStat[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [timeframe, setTimeframe] = useState<string>("today") // today, week, month
@@ -182,10 +183,21 @@ export function AppDetails({ appId, appName, onBack }: AppDetailsProps) {
               Application Details
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-            {appName || appId}
-          </h2>
-          <Badge variant="outline" className="mt-2 font-mono">ID: {appId}</Badge>
+          <div className="flex items-center gap-4">
+            {appIcon && appIcon !== "NONE" ? (
+              <img src={appIcon} alt={appName} className="w-14 h-14 rounded-lg object-contain" />
+            ) : (
+              <div className="w-14 h-14 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-500 uppercase">
+                {appName?.substring(0, 2) || appId.substring(0, 2)}
+              </div>
+            )}
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                {appName || appId}
+              </h2>
+              <Badge variant="outline" className="mt-2 font-mono">ID: {appId}</Badge>
+            </div>
+          </div>
         </div>
       </Card>
 

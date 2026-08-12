@@ -47,6 +47,7 @@ export default function App() {
   // App Details state
   const [activeAppId, setActiveAppId] = useState<string | null>(null)
   const [activeAppName, setActiveAppName] = useState<string>("")
+  const [iconCache, setIconCache] = useState<Record<string, string>>({})
 
   const fetchData = async () => {
     setIsRefreshing(true)
@@ -132,6 +133,26 @@ export default function App() {
     }
   }, [timeframe])
 
+  useEffect(() => {
+    const fetchIcons = async () => {
+      if (wails && appStats.length > 0) {
+        const newIcons = { ...iconCache }
+        let changed = false
+        for (const stat of appStats) {
+          // If we haven't attempted to fetch this icon yet (undefined)
+          if (newIcons[stat.app_id] === undefined) {
+            const b64 = await wails.GetAppIcon(stat.app_id)
+            // Cache the base64 string, or "NONE" if not found, to prevent endless retries
+            newIcons[stat.app_id] = b64 || "NONE"
+            changed = true
+          }
+        }
+        if (changed) setIconCache(newIcons)
+      }
+    }
+    fetchIcons()
+  }, [appStats])
+
   const handleToggleTracking = async () => {
     if (wails) {
       const active = await wails.ToggleTracking()
@@ -216,7 +237,7 @@ export default function App() {
         </header>
 
         {activeAppId ? (
-          <AppDetails appId={activeAppId} appName={activeAppName} onBack={() => setActiveAppId(null)} />
+          <AppDetails appId={activeAppId} appName={activeAppName} appIcon={iconCache[activeAppId]} onBack={() => setActiveAppId(null)} />
         ) : (
           <div className="space-y-6">
             {/* Hero Active Focus Card */}
@@ -308,9 +329,18 @@ export default function App() {
                       }}
                     >
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[220px] sm:max-w-[340px]">
-                          {stat.app_name || stat.app_id}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
+                            <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-sm object-contain" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-sm bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
+                              {stat.app_name?.substring(0, 2) || stat.app_id.substring(0, 2)}
+                            </div>
+                          )}
+                          <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">
+                            {stat.app_name || stat.app_id}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-3 text-xs font-mono">
                           <span className="text-slate-600 dark:text-slate-400 font-semibold">{formatDuration(stat.total_duration_seconds)}</span>
                           <span className="font-black text-[#558B2F] dark:text-[#C6FE1E] w-12 text-right">

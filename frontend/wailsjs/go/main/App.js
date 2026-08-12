@@ -6,6 +6,10 @@ export function GetAdapterStatus() {
   return window['go']['main']['App']['GetAdapterStatus']();
 }
 
+export function GetAppIcon(arg1) {
+  return window['go']['main']['App']['GetAppIcon'](arg1);
+}
+
 export function GetAppSessionHistory(arg1, arg2) {
   return window['go']['main']['App']['GetAppSessionHistory'](arg1, arg2);
 }

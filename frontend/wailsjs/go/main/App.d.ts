@@ -5,6 +5,8 @@ import {storage} from '../models';
 
 export function GetAdapterStatus():Promise<Array<engine.AdapterStatusInfo>>;
 
+export function GetAppIcon(arg1:string):Promise<string>;
+
 export function GetAppSessionHistory(arg1:string,arg2:number):Promise<Array<storage.SessionRecord>>;
 
 export function GetAppUsageStats(arg1:string,arg2:string):Promise<Array<storage.AppUsageStat>>;

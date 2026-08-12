@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"chrolog/internal/engine"
+	"chrolog/internal/icons"
 	"chrolog/internal/storage"
 )
 
@@ -111,4 +112,9 @@ func (a *App) GetAppSessionHistory(appID string, limit int) ([]storage.SessionRe
 		return nil, fmt.Errorf("engine not initialized")
 	}
 	return a.engine.GetAppSessionHistory(a.ctx, appID, limit)
+}
+
+// GetAppIcon resolves and returns the base64 encoded icon for an application ID.
+func (a *App) GetAppIcon(appID string) string {
+	return icons.GetAppIcon(appID)
 }
