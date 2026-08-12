@@ -273,6 +273,20 @@ func (e *Engine) GetRecentSessions(ctx context.Context, limit int) ([]storage.Se
 	return e.storage.GetRecentSessions(ctx, limit)
 }
 
+func (e *Engine) GetAppUsageStats(ctx context.Context, appID string, timeframe string) ([]storage.AppUsageStat, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return e.storage.GetAppUsageStats(ctx, appID, timeframe)
+}
+
+func (e *Engine) GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]storage.SessionRecord, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return e.storage.GetAppSessionHistory(ctx, appID, limit)
+}
+
 func (e *Engine) Stop() error {
 	e.mu.Lock()
 	if !e.running {

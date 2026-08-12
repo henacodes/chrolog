@@ -1,26 +1,101 @@
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@layer base {
+  :root {
+    --background: 0 0% 100%;           /* PURE WHITE #FFFFFF */
+    --foreground: 222 47% 11%;        /* DARK SLATE TEXT #0F172A */
+
+    --card: 0 0% 100%;                 /* PURE WHITE CARD #FFFFFF */
+    --card-foreground: 222 47% 11%;     /* DARK SLATE CARD TEXT #0F172A */
+    --card-border: 214 32% 88%;        /* CRISP SLATE BORDER #CBD5E1 */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 84 81% 36%;            /* SOLID GREEN #4D7C0F */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 95%;          /* LIGHT GRAY #F1F5F9 */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 16% 40%;   /* MEDIUM GRAY #334155 */
+
+    --accent: 84 70% 90%;
+    --accent-foreground: 84 81% 25%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 84 81% 36%;
+
+    --radius: 0.85rem;
+  }
+
+  .dark {
+    --background: 210 14% 7%;         /* DEEP PITCH CHARCOAL #111315 */
+    --foreground: 210 20% 96%;        /* CRISP OFF-WHITE #F8FAFC */
+
+    --card: 210 12% 12%;              /* DARK CHARCOAL CARD #1C1F23 */
+    --card-foreground: 210 20% 96%;   /* LIGHT TEXT #F8FAFC */
+    --card-border: 210 10% 20%;        /* DARK SLATE BORDER #2B3036 */
+
+    --popover: 210 12% 12%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 76 97% 55%;            /* CYBER LIME #C6FE1E */
+    --primary-foreground: 210 14% 7%;  /* PITCH BLACK TEXT FOR LIME */
+
+    --secondary: 210 10% 18%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 210 10% 17%;
+    --muted-foreground: 215 14% 68%;   /* LIGHT SLATE #94A3B8 */
+
+    --accent: 76 97% 15%;
+    --accent-foreground: 76 97% 65%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 10% 20%;
+    --input: 210 10% 20%;
+    --ring: 76 97% 55%;
+  }
 }
 
-body {
-    margin: 0;
-    color: white;
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  html, body, #root {
+    min-height: 100vh;
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
 }
 
-@font-face {
-    font-family: "Nunito";
-    font-style: normal;
-    font-weight: 400;
-    src: local(""),
-    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+/* Custom Flat Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-#app {
-    height: 100vh;
-    text-align: center;
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
 }

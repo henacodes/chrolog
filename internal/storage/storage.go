@@ -28,6 +28,12 @@ type AppStatRecord struct {
 	Percentage           float64 `json:"percentage"`
 }
 
+// AppUsageStat represents aggregated usage duration for an app grouped by a time bin.
+type AppUsageStat struct {
+	Label           string `json:"label"`
+	DurationSeconds int64  `json:"duration_seconds"`
+}
+
 // Storage is the interface for persisting normalized events and session records.
 type Storage interface {
 	Init(ctx context.Context) error
@@ -35,5 +41,7 @@ type Storage interface {
 	SaveRawEvent(ctx context.Context, event tracker.NormalizedEvent) error
 	GetRecentSessions(ctx context.Context, limit int) ([]SessionRecord, error)
 	GetAppStats(ctx context.Context, since time.Time) ([]AppStatRecord, error)
+	GetAppUsageStats(ctx context.Context, appID string, timeframe string) ([]AppUsageStat, error)
+	GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]SessionRecord, error)
 	Close() error
 }

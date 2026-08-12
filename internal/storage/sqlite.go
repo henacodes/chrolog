@@ -248,3 +248,130 @@ func (s *SQLiteStorage) Close() error {
 	}
 	return nil
 }
+
+func (s *SQLiteStorage) GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]SessionRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return nil, fmt.Errorf("storage database not initialized")
+	}
+
+	if limit <= 0 {
+		limit = 50
+	}
+
+	query := `
+	SELECT id, app_id, app_name, window_title, source, started_at, ended_at, duration_seconds, metadata_json
+	FROM sessions
+	WHERE app_id = ?
+	ORDER BY started_at DESC
+	LIMIT ?
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, appID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query app sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var records []SessionRecord
+	for rows.Next() {
+		var r SessionRecord
+		var startedAtStr, endedAtStr, metaJSON string
+
+		err := rows.Scan(
+			&r.ID, &r.AppID, &r.AppName, &r.WindowTitle, &r.Source,
+			&startedAtStr, &endedAtStr, &r.DurationSeconds, &metaJSON,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan session record row: %w", err)
+		}
+
+		if t, err := time.Parse(time.RFC3339Nano, startedAtStr); err == nil {
+			r.StartedAt = t
+		}
+		if t, err := time.Parse(time.RFC3339Nano, endedAtStr); err == nil {
+			r.EndedAt = t
+		}
+		if metaJSON != "" {
+			_ = json.Unmarshal([]byte(metaJSON), &r.Metadata)
+		}
+
+		records = append(records, r)
+	}
+
+	return records, nil
+}
+
+func (s *SQLiteStorage) GetAppUsageStats(ctx context.Context, appID string, timeframe string) ([]AppUsageStat, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return nil, fmt.Errorf("storage database not initialized")
+	}
+
+	var query string
+	var since time.Time
+	now := time.Now()
+
+	switch timeframe {
+	case "today":
+		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		// Group by hour
+		query = `
+		SELECT strftime('%H:00', started_at) as label, SUM(duration_seconds) as duration
+		FROM sessions
+		WHERE app_id = ? AND started_at >= ?
+		GROUP BY label
+		ORDER BY label
+		`
+	case "week":
+		since = now.AddDate(0, 0, -7)
+		// Group by day
+		query = `
+		SELECT strftime('%Y-%m-%d', started_at) as label, SUM(duration_seconds) as duration
+		FROM sessions
+		WHERE app_id = ? AND started_at >= ?
+		GROUP BY label
+		ORDER BY label
+		`
+	case "month":
+		since = now.AddDate(0, 0, -30)
+		// Group by day
+		query = `
+		SELECT strftime('%Y-%m-%d', started_at) as label, SUM(duration_seconds) as duration
+		FROM sessions
+		WHERE app_id = ? AND started_at >= ?
+		GROUP BY label
+		ORDER BY label
+		`
+	default:
+		since = now.Add(-24 * time.Hour)
+		query = `
+		SELECT strftime('%H:00', started_at) as label, SUM(duration_seconds) as duration
+		FROM sessions
+		WHERE app_id = ? AND started_at >= ?
+		GROUP BY label
+		ORDER BY label
+		`
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, appID, since.Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query app usage stats: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []AppUsageStat
+	for rows.Next() {
+		var s AppUsageStat
+		if err := rows.Scan(&s.Label, &s.DurationSeconds); err != nil {
+			return nil, fmt.Errorf("failed to scan usage stat row: %w", err)
+		}
+		stats = append(stats, s)
+	}
+
+	return stats, nil
+}

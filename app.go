@@ -96,3 +96,19 @@ func (a *App) IsPaused() (bool, error) {
 	}
 	return a.engine.IsPaused(), nil
 }
+
+// GetAppUsageStats returns aggregated usage duration for a specific app over a timeframe.
+func (a *App) GetAppUsageStats(appID string, timeframe string) ([]storage.AppUsageStat, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetAppUsageStats(a.ctx, appID, timeframe)
+}
+
+// GetAppSessionHistory returns recent sessions for a specific app.
+func (a *App) GetAppSessionHistory(appID string, limit int) ([]storage.SessionRecord, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetAppSessionHistory(a.ctx, appID, limit)
+}
