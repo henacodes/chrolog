@@ -1,8 +1,22 @@
 import { useEffect, useState } from "react"
-import { ArrowLeft, BarChart3, LineChart, History, Activity } from "lucide-react"
+import { ArrowLeft, BarChart3, LineChart, History, Activity, CalendarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { format, parseISO } from "date-fns"
 import {
   BarChart,
   Bar,
@@ -14,6 +28,7 @@ import {
   LineChart as RechartsLineChart,
   Line
 } from "recharts"
+import { GithubHeatmap } from "./GithubHeatmap"
 
 interface AppDetailsProps {
   appId: string
@@ -49,72 +64,97 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
   const [viewMode, setViewMode] = useState<"graphs" | "sessions">("graphs")
   const [isLoading, setIsLoading] = useState(false)
 
+  // Session specific state
+  const [sessionDates, setSessionDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [sessionHours, setSessionHours] = useState<number[]>([])
+  const [selectedHour, setSelectedHour] = useState<number | null>(null)
+
+  // 1. Fetch Graphs Data
   useEffect(() => {
-    fetchData()
+    if (viewMode === "graphs") {
+      const fetchGraphs = async () => {
+        setIsLoading(true)
+        try {
+          if (wails) {
+            const res = await wails.GetAppUsageStats(appId, timeframe)
+            setStats(res || [])
+          }
+        } catch (err) {
+          console.error("Error fetching graphs:", err)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchGraphs()
+    }
   }, [appId, timeframe, viewMode])
 
-  const fetchData = async () => {
-    setIsLoading(true)
-    try {
-      if (wails) {
-        if (viewMode === "graphs") {
-          const res = await wails.GetAppUsageStats(appId, timeframe)
-          setStats(res || [])
-        } else {
-          const res = await wails.GetAppSessionHistory(appId, 100) // limit 100
-          setSessions(res || [])
+  // 2. Fetch Session Dates
+  useEffect(() => {
+    if (viewMode === "sessions" && wails) {
+      const initSessions = async () => {
+        try {
+          const dates = await wails.GetActiveSessionDates(appId)
+          setSessionDates(dates || [])
+          if (dates && dates.length > 0) {
+            if (!selectedDate || !dates.includes(selectedDate)) {
+               setSelectedDate(dates[0])
+            }
+          } else {
+             setSessions([])
+             setSessionHours([])
+             setSelectedDate(null)
+             setSelectedHour(null)
+          }
+        } catch (e) {
+          console.error("Error fetching session dates:", e)
         }
-      } else {
-        setMockData()
       }
-    } catch (err) {
-      console.error("Error fetching app details:", err)
-    } finally {
-      setIsLoading(false)
+      initSessions()
     }
-  }
+  }, [viewMode, appId]) // Intentional: we only want this to run when mode/app changes
 
-  const setMockData = () => {
-    if (viewMode === "graphs") {
-      if (timeframe === "today") {
-        setStats([
-          { label: "09:00", duration_seconds: 1200 },
-          { label: "10:00", duration_seconds: 3400 },
-          { label: "11:00", duration_seconds: 1800 },
-          { label: "12:00", duration_seconds: 500 },
-          { label: "13:00", duration_seconds: 2200 },
-        ])
-      } else if (timeframe === "week") {
-        setStats([
-          { label: "Mon", duration_seconds: 14200 },
-          { label: "Tue", duration_seconds: 23400 },
-          { label: "Wed", duration_seconds: 18800 },
-          { label: "Thu", duration_seconds: 15500 },
-        ])
-      } else {
-        setStats([
-          { label: "Week 1", duration_seconds: 54200 },
-          { label: "Week 2", duration_seconds: 63400 },
-          { label: "Week 3", duration_seconds: 48800 },
-        ])
+  // 3. Fetch Session Hours when Date changes
+  useEffect(() => {
+    if (viewMode === "sessions" && selectedDate && wails) {
+      const fetchHours = async () => {
+        try {
+          const hours = await wails.GetActiveSessionHours(appId, selectedDate)
+          setSessionHours(hours || [])
+          if (hours && hours.length > 0) {
+             if (selectedHour === null || !hours.includes(selectedHour)) {
+               setSelectedHour(hours[0])
+             }
+          } else {
+            setSelectedHour(null)
+            setSessions([])
+          }
+        } catch (e) {
+          console.error("Error fetching session hours:", e)
+        }
       }
-    } else {
-      setSessions([
-        {
-          id: 1, app_id: appId, app_name: appName, window_title: "Focus Document", source: "hyprland",
-          started_at: new Date(Date.now() - 3600000).toISOString(),
-          ended_at: new Date(Date.now() - 3000000).toISOString(),
-          duration_seconds: 600
-        },
-        {
-          id: 2, app_id: appId, app_name: appName, window_title: "Project Files", source: "hyprland",
-          started_at: new Date(Date.now() - 7200000).toISOString(),
-          ended_at: new Date(Date.now() - 3600000).toISOString(),
-          duration_seconds: 3600
-        },
-      ])
+      fetchHours()
     }
-  }
+  }, [selectedDate, viewMode, appId])
+
+  // 4. Fetch Sessions by time
+  useEffect(() => {
+    if (viewMode === "sessions" && selectedDate && selectedHour !== null && wails) {
+      const fetchSessions = async () => {
+        setIsLoading(true)
+        try {
+          const data = await wails.GetAppSessionsByTime(appId, selectedDate, selectedHour)
+          setSessions(data || [])
+        } catch (e) {
+          console.error("Error fetching sessions by time:", e)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchSessions()
+    }
+  }, [selectedHour, selectedDate, viewMode, appId])
 
   const formatDuration = (seconds: number) => {
     if (seconds <= 0) return "0s"
@@ -135,26 +175,26 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
     }
   }
 
-  const formatTooltip = (value: number) => {
-    return [formatDuration(value), "Duration"]
+  const formatTooltip = (value: any): any[] => {
+    return [formatDuration(Number(value)), "Duration"]
   }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button variant="outline" onClick={onBack} className="gap-2 rounded-xl">
+        <Button variant="outline" onClick={onBack} className="gap-2 rounded-none">
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Button>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111315] p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+          <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
             <button
               onClick={() => setViewMode("graphs")}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-none transition-all flex items-center gap-1.5 ${
                 viewMode === "graphs"
-                  ? "bg-white dark:bg-[#1C1F23] text-slate-900 dark:text-slate-100 shadow-sm"
+                  ? "bg-card text-slate-900 dark:text-slate-100 shadow-none"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
@@ -162,9 +202,9 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
             </button>
             <button
               onClick={() => setViewMode("sessions")}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-none transition-all flex items-center gap-1.5 ${
                 viewMode === "sessions"
-                  ? "bg-white dark:bg-[#1C1F23] text-slate-900 dark:text-slate-100 shadow-sm"
+                  ? "bg-card text-slate-900 dark:text-slate-100 shadow-none"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
@@ -175,19 +215,19 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
       </div>
 
       {/* App Header Info */}
-      <Card className="border border-slate-200 dark:border-[#2B3036] bg-white dark:bg-[#1C1F23] shadow-md relative overflow-hidden">
+      <Card className="border border-border bg-card shadow-none relative overflow-hidden">
         <div className="p-6">
           <div className="flex items-center gap-2 pb-2">
-            <Activity className="h-5 w-5 text-[#558B2F] dark:text-[#C6FE1E]" />
+            <Activity className="h-5 w-5 text-[#558B2F] dark:text-primary" />
             <span className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
               Application Details
             </span>
           </div>
           <div className="flex items-center gap-4">
             {appIcon && appIcon !== "NONE" ? (
-              <img src={appIcon} alt={appName} className="w-14 h-14 rounded-lg object-contain" />
+              <img src={appIcon} alt={appName} className="w-14 h-14 rounded-none object-contain" />
             ) : (
-              <div className="w-14 h-14 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-500 uppercase">
+              <div className="w-14 h-14 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-500 uppercase">
                 {appName?.substring(0, 2) || appId.substring(0, 2)}
               </div>
             )}
@@ -202,7 +242,7 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
       </Card>
 
       {/* Content Area */}
-      <Card className="border border-slate-200 dark:border-[#2B3036] bg-white dark:bg-[#1C1F23]">
+      <Card className="border border-border bg-card">
         {viewMode === "graphs" ? (
           <>
             <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
@@ -212,14 +252,14 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Timeframe Selector */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111315] p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
                   {["today", "week", "month"].map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-black ${
+                      className={`px-3 py-1 rounded-none transition-all uppercase text-[11px] font-black ${
                         timeframe === tf
-                          ? "bg-[#558B2F] dark:bg-[#C6FE1E] text-white dark:text-slate-950 shadow-sm"
+                          ? "bg-[#558B2F] dark:bg-primary text-white dark:text-slate-950 shadow-none"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
@@ -229,17 +269,17 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
                 </div>
 
                 {/* Chart Type Selector */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111315] p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
                   <button
                     onClick={() => setChartType("bar")}
-                    className={`p-1.5 rounded-lg transition-all ${chartType === "bar" ? "bg-white dark:bg-[#1C1F23] shadow-sm text-[#558B2F] dark:text-[#C6FE1E]" : "text-slate-500"}`}
+                    className={`p-1.5 rounded-none transition-all ${chartType === "bar" ? "bg-card shadow-none text-[#558B2F] dark:text-primary" : "text-slate-500"}`}
                     title="Bar Chart"
                   >
                     <BarChart3 className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setChartType("line")}
-                    className={`p-1.5 rounded-lg transition-all ${chartType === "line" ? "bg-white dark:bg-[#1C1F23] shadow-sm text-[#558B2F] dark:text-[#C6FE1E]" : "text-slate-500"}`}
+                    className={`p-1.5 rounded-none transition-all ${chartType === "line" ? "bg-card shadow-none text-[#558B2F] dark:text-primary" : "text-slate-500"}`}
                     title="Line Chart"
                   >
                     <LineChart className="h-4 w-4" />
@@ -264,7 +304,7 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
                           contentStyle={{ backgroundColor: '#1C1F23', borderColor: '#2B3036', borderRadius: '0.75rem', color: '#F8FAFC', fontWeight: 'bold' }}
                           formatter={formatTooltip}
                         />
-                        <Bar dataKey="duration_seconds" fill="#65A30D" radius={[4, 4, 0, 0]} className="dark:fill-[#C6FE1E]" />
+                        <Bar dataKey="duration_seconds" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     ) : (
                       <RechartsLineChart data={stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -275,7 +315,7 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
                           contentStyle={{ backgroundColor: '#1C1F23', borderColor: '#2B3036', borderRadius: '0.75rem', color: '#F8FAFC', fontWeight: 'bold' }}
                           formatter={formatTooltip}
                         />
-                        <Line type="monotone" dataKey="duration_seconds" stroke="#65A30D" strokeWidth={3} dot={{ r: 4, fill: "#65A30D" }} activeDot={{ r: 6 }} className="dark:stroke-[#C6FE1E]" />
+                        <Line type="monotone" dataKey="duration_seconds" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: "var(--primary)" }} activeDot={{ r: 6 }} />
                       </RechartsLineChart>
                     )}
                   </ResponsiveContainer>
@@ -287,9 +327,58 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
           </>
         ) : (
           <>
-            <CardHeader>
-              <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100">Session History</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Recent detailed window focuses</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
+              <div>
+                <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100">Session History</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Detailed window focuses by hour</CardDescription>
+              </div>
+              
+              <div className="flex items-center gap-2 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-[180px] justify-start text-left font-bold rounded-none border-slate-200 dark:border-slate-800 ${!selectedDate && "text-muted-foreground"}`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(parseISO(selectedDate), "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 rounded-none border-border" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate ? parseISO(selectedDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setSelectedDate(format(date, 'yyyy-MM-dd'))
+                        }
+                      }}
+                      disabled={(date) => {
+                        const dateStr = format(date, 'yyyy-MM-dd')
+                        return !sessionDates.includes(dateStr)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Select
+                  value={selectedHour !== null ? selectedHour.toString() : ""}
+                  onValueChange={(val) => setSelectedHour(parseInt(val))}
+                  disabled={!selectedDate || sessionHours.length === 0}
+                >
+                  <SelectTrigger className="w-[100px] font-bold rounded-none border-slate-200 dark:border-slate-800">
+                    <SelectValue placeholder="Time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessionHours.length === 0 && <SelectItem value="none" disabled>-</SelectItem>}
+                    {sessionHours.map(h => (
+                      <SelectItem key={h} value={h.toString()} className="font-bold">
+                        {h.toString().padStart(2, '0')}:00
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -316,11 +405,11 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div className="bg-white dark:bg-[#1C1F23] border border-slate-200 dark:border-[#2B3036] p-3 rounded-xl shadow-lg font-mono text-xs space-y-1">
+                              <div className="bg-card border border-border p-3 rounded-none shadow-none font-mono text-xs space-y-1">
                                 <p className="font-bold text-slate-900 dark:text-[#F8FAFC] break-words max-w-[250px]">
                                   {data.window_title || "Untitled"}
                                 </p>
-                                <p className="text-[#558B2F] dark:text-[#C6FE1E] font-black">
+                                <p className="text-[#558B2F] dark:text-primary font-black">
                                   Duration: {formatDuration(data.duration_seconds)}
                                 </p>
                                 <p className="text-slate-500 dark:text-slate-400 font-semibold">
@@ -332,7 +421,7 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
                           return null;
                         }}
                       />
-                      <Bar dataKey="duration_seconds" fill="#65A30D" radius={[0, 4, 4, 0]} className="dark:fill-[#C6FE1E]" barSize={20} />
+                      <Bar dataKey="duration_seconds" fill="var(--primary)" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -343,6 +432,9 @@ export function AppDetails({ appId, appName, appIcon, onBack }: AppDetailsProps)
           </>
         )}
       </Card>
+      
+      {/* Github Heatmap */}
+      <GithubHeatmap appId={appId} appName={appName} />
     </div>
   )
 }

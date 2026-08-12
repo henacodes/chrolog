@@ -3,11 +3,19 @@
 import {engine} from '../models';
 import {storage} from '../models';
 
+export function GetActiveSessionDates(arg1:string):Promise<Array<string>>;
+
+export function GetActiveSessionHours(arg1:string,arg2:string):Promise<Array<number>>;
+
 export function GetAdapterStatus():Promise<Array<engine.AdapterStatusInfo>>;
+
+export function GetAppDocumentStats(arg1:string,arg2:string):Promise<Array<storage.AppUsageStat>>;
 
 export function GetAppIcon(arg1:string):Promise<string>;
 
 export function GetAppSessionHistory(arg1:string,arg2:number):Promise<Array<storage.SessionRecord>>;
+
+export function GetAppSessionsByTime(arg1:string,arg2:string,arg3:number):Promise<Array<storage.SessionRecord>>;
 
 export function GetAppUsageStats(arg1:string,arg2:string):Promise<Array<storage.AppUsageStat>>;
 

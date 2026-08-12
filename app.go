@@ -114,6 +114,34 @@ func (a *App) GetAppSessionHistory(appID string, limit int) ([]storage.SessionRe
 	return a.engine.GetAppSessionHistory(a.ctx, appID, limit)
 }
 
+func (a *App) GetActiveSessionDates(appID string) ([]string, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetActiveSessionDates(a.ctx, appID)
+}
+
+func (a *App) GetActiveSessionHours(appID string, date string) ([]int, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetActiveSessionHours(a.ctx, appID, date)
+}
+
+func (a *App) GetAppSessionsByTime(appID string, date string, hour int) ([]storage.SessionRecord, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetAppSessionsByTime(a.ctx, appID, date, hour)
+}
+
+func (a *App) GetAppDocumentStats(appID string, timeframe string) ([]storage.AppUsageStat, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetAppDocumentStats(a.ctx, appID, timeframe)
+}
+
 // GetAppIcon resolves and returns the base64 encoded icon for an application ID.
 func (a *App) GetAppIcon(appID string) string {
 	return icons.GetAppIcon(appID)

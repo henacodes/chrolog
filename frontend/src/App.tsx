@@ -43,7 +43,7 @@ export default function App() {
   const [isPaused, setIsPaused] = useState<boolean>(false)
   const [timeframe, setTimeframe] = useState<string>("today")
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
-  
+
   // App Details state
   const [activeAppId, setActiveAppId] = useState<string | null>(null)
   const [activeAppName, setActiveAppName] = useState<string>("")
@@ -183,24 +183,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#111315] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150 selection:bg-[#C6FE1E] selection:text-black">
+    <div className="min-h-screen bg-background text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150 selection:bg-primary selection:text-black">
       {/* Main App Container */}
       <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Navbar */}
-        <header className="rounded-2xl p-5 border border-slate-200 dark:border-[#2B3036] bg-white dark:bg-[#1C1F23] flex flex-wrap items-center justify-between gap-4 shadow-sm">
+        <header className="timeline-ruler rounded-none p-5 border border-border bg-card flex flex-wrap items-center justify-between gap-4 shadow-none">
           <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-2xl bg-[#558B2F] dark:bg-[#C6FE1E] text-white dark:text-slate-950 flex items-center justify-center shadow-md">
+            <div className="h-11 w-11 rounded-none bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center justify-center shadow-none">
               <Zap className="h-6 w-6 fill-current" />
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 CHROLOG
-                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-[#C6FE1E]/20 text-emerald-800 dark:text-[#C6FE1E] border border-emerald-200 dark:border-[#C6FE1E]/40 uppercase tracking-widest">
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-none bg-emerald-100 dark:bg-primary/20 text-emerald-800 dark:text-primary border border-emerald-200 dark:border-primary/40 uppercase tracking-widest">
                   Overview
                 </span>
               </h1>
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                Modern Decoupled Time Tracker &bull; High Contrast Theme
+                A Robust Time Tracker
               </p>
             </div>
           </div>
@@ -208,11 +208,11 @@ export default function App() {
           {/* Right Controls */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Adapter Indicators */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#111315] border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
-              <Cpu className="h-3.5 w-3.5 text-[#558B2F] dark:text-[#C6FE1E]" />
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-background border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <Cpu className="h-3.5 w-3.5 text-primary dark:text-primary" />
               <span>Adapters:</span>
               {adapters.map((a) => (
-                <Badge key={a.id} variant="secondary" className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md">
+                <Badge key={a.id} variant="secondary" className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-none">
                   {a.id}
                 </Badge>
               ))}
@@ -224,13 +224,13 @@ export default function App() {
               variant={isPaused ? "destructive" : "default"}
               size="sm"
               onClick={handleToggleTracking}
-              className="gap-2 shadow-sm uppercase tracking-wider font-black text-xs rounded-xl"
+              className="gap-2 shadow-none uppercase tracking-wider font-black text-xs rounded-none"
             >
               {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
               {isPaused ? "Resume" : "Pause"}
             </Button>
 
-            <Button variant="outline" size="icon" onClick={fetchData} disabled={isRefreshing} className="h-9 w-9 rounded-xl">
+            <Button variant="outline" size="icon" onClick={fetchData} disabled={isRefreshing} className="h-9 w-9 rounded-none">
               <RefreshCw className={`h-4 w-4 text-slate-700 dark:text-slate-300 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
@@ -241,18 +241,18 @@ export default function App() {
         ) : (
           <div className="space-y-6">
             {/* Hero Active Focus Card */}
-            <Card className="border border-slate-200 dark:border-[#2B3036] bg-white dark:bg-[#1C1F23] shadow-md relative overflow-hidden">
+            <Card className="border border-border bg-card shadow-none relative overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center justify-between pb-3">
                   <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-[#558B2F] dark:text-[#C6FE1E]" />
-                    <span className="text-xs font-black uppercase tracking-widest text-[#558B2F] dark:text-[#C6FE1E]">
+                    <Activity className="h-4 w-4 text-primary dark:text-primary" />
+                    <span className="text-xs font-black uppercase tracking-widest text-primary dark:text-primary">
                       Current Active Focus
                     </span>
                   </div>
-                  <Badge variant={isPaused ? "destructive" : "lime"} className="flex items-center gap-1.5 px-3 py-1 rounded-full">
-                    <span className={`h-2 w-2 rounded-full ${isPaused ? "bg-slate-400" : "bg-[#558B2F] dark:bg-[#C6FE1E] animate-pulse"}`} />
-                    {isPaused ? "Paused" : "Live Streaming"}
+                  <Badge variant={isPaused ? "destructive" : "lime"} className="flex items-center gap-1.5 px-3 py-1 rounded-none">
+                    <span className={`h-2 w-2 rounded-none ${isPaused ? "bg-slate-400" : "bg-primary dark:bg-primary animate-pulse"}`} />
+                    <span className="leading-none pt-[1px]">{isPaused ? "Paused" : "Live Streaming"}</span>
                   </Badge>
                 </div>
 
@@ -261,24 +261,24 @@ export default function App() {
                     {currentSession ? currentSession.app_name || currentSession.app_id : "No Active Window"}
                   </h2>
 
-                  <div className="p-4 rounded-xl bg-slate-100 dark:bg-[#111315] border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 truncate shadow-inner">
+                  <div className="p-4 rounded-none bg-background border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 truncate shadow-none">
                     {currentSession?.window_title || "Untitled Focus State"}
                   </div>
 
                   <div className="flex flex-wrap items-end justify-between gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                     <div>
                       <div className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">Duration Elapsed</div>
-                      <div className="text-4xl sm:text-5xl font-black text-[#558B2F] dark:text-[#C6FE1E] font-mono tracking-tight mt-1">
+                      <div className="text-4xl sm:text-5xl font-black text-primary dark:text-primary font-mono tracking-tight mt-1">
                         {formatDuration(currentSession?.duration_seconds || 0)}
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="text-xs font-mono uppercase rounded-lg">
+                      <Badge variant="outline" className="text-xs font-mono uppercase rounded-none">
                         Source: {currentSession?.source || "None"}
                       </Badge>
                       {currentSession?.started_at && (
-                        <Badge variant="outline" className="text-xs font-mono rounded-lg">
+                        <Badge variant="outline" className="text-xs font-mono rounded-none">
                           Started {formatTime(currentSession.started_at)}
                         </Badge>
                       )}
@@ -289,27 +289,26 @@ export default function App() {
             </Card>
 
             {/* Application Usage Breakdown Card */}
-            <Card className="border border-slate-200 dark:border-[#2B3036] bg-white dark:bg-[#1C1F23]">
+            <Card className="border border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <div>
                   <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                    <BarChart3 className="h-5 w-5 text-[#558B2F] dark:text-[#C6FE1E]" />
+                    <BarChart3 className="h-5 w-5 text-primary dark:text-primary" />
                     Usage Overview
                   </CardTitle>
                   <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Click an app to view detailed statistics</CardDescription>
                 </div>
 
                 {/* Timeframe Selector */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111315] p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
                   {["today", "24h", "7d"].map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-black ${
-                        timeframe === tf
-                          ? "bg-[#558B2F] dark:bg-[#C6FE1E] text-white dark:text-slate-950 shadow-sm"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
+                      className={`px-3 py-1 rounded-none transition-all uppercase text-[11px] font-black ${timeframe === tf
+                        ? "bg-primary dark:bg-primary text-white dark:text-slate-950 shadow-none"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                        }`}
                     >
                       {tf}
                     </button>
@@ -320,9 +319,9 @@ export default function App() {
               <CardContent className="space-y-4">
                 {appStats.length > 0 ? (
                   appStats.map((stat) => (
-                    <div 
-                      key={stat.app_id} 
-                      className="space-y-2 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                    <div
+                      key={stat.app_id}
+                      className="space-y-2 p-3 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                       onClick={() => {
                         setActiveAppId(stat.app_id)
                         setActiveAppName(stat.app_name || stat.app_id)
@@ -331,9 +330,9 @@ export default function App() {
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
                           {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
-                            <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-sm object-contain" />
+                            <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-none object-contain" />
                           ) : (
-                            <div className="w-5 h-5 rounded-sm bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
+                            <div className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
                               {stat.app_name?.substring(0, 2) || stat.app_id.substring(0, 2)}
                             </div>
                           )}
@@ -343,7 +342,7 @@ export default function App() {
                         </div>
                         <div className="flex items-center gap-3 text-xs font-mono">
                           <span className="text-slate-600 dark:text-slate-400 font-semibold">{formatDuration(stat.total_duration_seconds)}</span>
-                          <span className="font-black text-[#558B2F] dark:text-[#C6FE1E] w-12 text-right">
+                          <span className="font-black text-primary dark:text-primary w-12 text-right">
                             {stat.percentage.toFixed(1)}%
                           </span>
                         </div>
@@ -363,10 +362,10 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto py-6 bg-white dark:bg-[#1C1F23] border-t border-slate-200 dark:border-[#2B3036]">
+      <footer className="mt-auto py-6 bg-card border-t border-border">
         <div className="max-w-5xl mx-auto px-4 text-center text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center justify-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#558B2F] dark:text-[#C6FE1E]" />
-          <span>Chrolog Time Tracker &bull; 100% Local Privacy &bull; High-Contrast Dashboard</span>
+          <ShieldCheck className="h-4 w-4 text-primary dark:text-primary" />
+          <span>Chrolog Time Tracker &bull; 100% Local Privacy</span>
         </div>
       </footer>
     </div>

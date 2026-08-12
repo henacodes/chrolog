@@ -43,5 +43,8 @@ type Storage interface {
 	GetAppStats(ctx context.Context, since time.Time) ([]AppStatRecord, error)
 	GetAppUsageStats(ctx context.Context, appID string, timeframe string) ([]AppUsageStat, error)
 	GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]SessionRecord, error)
+	GetActiveSessionDates(ctx context.Context, appID string) ([]string, error)
+	GetActiveSessionHours(ctx context.Context, appID string, date string) ([]int, error)
+	GetAppSessionsByTime(ctx context.Context, appID string, date string, hour int) ([]SessionRecord, error)
 	Close() error
 }

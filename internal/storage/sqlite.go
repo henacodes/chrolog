@@ -249,6 +249,106 @@ func (s *SQLiteStorage) Close() error {
 	return nil
 }
 
+// GetActiveSessionDates returns a list of distinct dates (YYYY-MM-DD) where the app was used.
+func (s *SQLiteStorage) GetActiveSessionDates(ctx context.Context, appID string) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	query := `
+		SELECT DISTINCT date(started_at) as session_date 
+		FROM sessions 
+		WHERE app_id = ? 
+		ORDER BY session_date DESC
+	`
+	rows, err := s.db.QueryContext(ctx, query, appID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dates []string
+	for rows.Next() {
+		var date string
+		if err := rows.Scan(&date); err != nil {
+			return nil, err
+		}
+		dates = append(dates, date)
+	}
+	return dates, nil
+}
+
+// GetActiveSessionHours returns a list of distinct hours (0-23) where the app was used on a specific date.
+func (s *SQLiteStorage) GetActiveSessionHours(ctx context.Context, appID string, date string) ([]int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	query := `
+		SELECT DISTINCT CAST(strftime('%H', started_at) AS INTEGER) as session_hour 
+		FROM sessions 
+		WHERE app_id = ? AND date(started_at) = ?
+		ORDER BY session_hour DESC
+	`
+	rows, err := s.db.QueryContext(ctx, query, appID, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hours []int
+	for rows.Next() {
+		var hour int
+		if err := rows.Scan(&hour); err != nil {
+			return nil, err
+		}
+		hours = append(hours, hour)
+	}
+	return hours, nil
+}
+
+// GetAppSessionsByTime returns sessions for a specific app filtered by date and optionally hour.
+// If hour is -1, it returns all sessions for that date.
+func (s *SQLiteStorage) GetAppSessionsByTime(ctx context.Context, appID string, date string, hour int) ([]SessionRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	query := `
+		SELECT id, app_id, app_name, window_title, source, started_at, ended_at, duration_seconds 
+		FROM sessions 
+		WHERE app_id = ? AND date(started_at) = ?
+	`
+	args := []interface{}{appID, date}
+
+	if hour >= 0 {
+		query += ` AND CAST(strftime('%H', started_at) AS INTEGER) = ?`
+		args = append(args, hour)
+	}
+	
+	query += ` ORDER BY started_at DESC`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []SessionRecord
+	for rows.Next() {
+		var rec SessionRecord
+		var startedAtStr, endedAtStr string
+		if err := rows.Scan(
+			&rec.ID, &rec.AppID, &rec.AppName, &rec.WindowTitle, &rec.Source,
+			&startedAtStr, &endedAtStr, &rec.DurationSeconds,
+		); err != nil {
+			return nil, err
+		}
+		if t, err := time.Parse(time.RFC3339Nano, startedAtStr); err == nil {
+			rec.StartedAt = t
+		}
+		if t, err := time.Parse(time.RFC3339Nano, endedAtStr); err == nil {
+			rec.EndedAt = t
+		}
+		records = append(records, rec)
+	}
+	return records, nil
+}
+
 func (s *SQLiteStorage) GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]SessionRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -347,6 +447,16 @@ func (s *SQLiteStorage) GetAppUsageStats(ctx context.Context, appID string, time
 		GROUP BY label
 		ORDER BY label
 		`
+	case "year":
+		since = now.AddDate(0, 0, -365)
+		// Group by day
+		query = `
+		SELECT strftime('%Y-%m-%d', started_at) as label, SUM(duration_seconds) as duration
+		FROM sessions
+		WHERE app_id = ? AND started_at >= ?
+		GROUP BY label
+		ORDER BY label
+		`
 	default:
 		since = now.Add(-24 * time.Hour)
 		query = `
@@ -369,6 +479,66 @@ func (s *SQLiteStorage) GetAppUsageStats(ctx context.Context, appID string, time
 		var s AppUsageStat
 		if err := rows.Scan(&s.Label, &s.DurationSeconds); err != nil {
 			return nil, fmt.Errorf("failed to scan usage stat row: %w", err)
+		}
+		stats = append(stats, s)
+	}
+
+	return stats, nil
+}
+
+func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, timeframe string) ([]AppUsageStat, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return nil, fmt.Errorf("storage database not initialized")
+	}
+
+	var since time.Time
+	now := time.Now()
+
+	switch timeframe {
+	case "today":
+		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	case "week":
+		since = now.AddDate(0, 0, -7)
+	case "month":
+		since = now.AddDate(0, 0, -30)
+	case "year":
+		since = now.AddDate(0, 0, -365)
+	default:
+		since = now.Add(-24 * time.Hour)
+	}
+
+	// SQLite json_extract extracts the fields from the metadata JSON object.
+	// If project is present, format as "project / document". Otherwise, just "document".
+	// Since metadata_json might be null or not have "document", we filter where it's not null.
+	query := `
+	SELECT 
+	  CASE 
+	    WHEN json_extract(metadata_json, '$.project') IS NOT NULL 
+	    THEN json_extract(metadata_json, '$.project') || ' / ' || json_extract(metadata_json, '$.document')
+	    ELSE json_extract(metadata_json, '$.document')
+	  END as doc, 
+	  SUM(duration_seconds) as duration
+	FROM sessions
+	WHERE app_id = ? AND started_at >= ? AND json_extract(metadata_json, '$.document') IS NOT NULL
+	GROUP BY doc
+	ORDER BY duration DESC
+	LIMIT 25
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, appID, since.Format(time.RFC3339Nano))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query app document stats: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []AppUsageStat
+	for rows.Next() {
+		var s AppUsageStat
+		if err := rows.Scan(&s.Label, &s.DurationSeconds); err != nil {
+			return nil, fmt.Errorf("failed to scan document stat row: %w", err)
 		}
 		stats = append(stats, s)
 	}

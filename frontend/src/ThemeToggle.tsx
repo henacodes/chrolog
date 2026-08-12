@@ -31,13 +31,13 @@ export function ThemeToggle() {
       variant="outline"
       size="sm"
       onClick={toggleTheme}
-      className="gap-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1C1F23] text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm rounded-xl"
+      className="gap-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1C1F23] text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm rounded-none"
       title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
     >
       {theme === "dark" ? (
         <>
           <Sun className="h-4 w-4 text-[#C6FE1E]" />
-          <span className="text-xs font-bold text-slate-100">Light Mode</span>
+          <span className="text-xs font-bold text-slate-100">Light Mode ee</span>
         </>
       ) : (
         <>

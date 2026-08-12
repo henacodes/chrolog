@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"chrolog/internal/parser"
 	"chrolog/internal/storage"
 	"chrolog/pkg/tracker"
 
@@ -173,6 +174,20 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		}
 	}
 
+	// Extract sub-context (document/tab/project) from window title
+	ctxData := parser.ExtractContext(ev.AppName, ev.WindowTitle)
+	
+	meta := ev.Metadata
+	if meta == nil {
+		meta = make(map[string]string)
+	}
+
+	for k, v := range ctxData {
+		if v != "" && v != ev.WindowTitle {
+			meta[k] = v
+		}
+	}
+
 	// Start new session span
 	e.activeSession = &storage.SessionRecord{
 		AppID:           ev.AppID,
@@ -182,7 +197,7 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		StartedAt:       ev.Timestamp,
 		EndedAt:         ev.Timestamp,
 		DurationSeconds: 0,
-		Metadata:        ev.Metadata,
+		Metadata:        meta,
 	}
 
 	if e.wailsCtx != nil {
@@ -280,11 +295,43 @@ func (e *Engine) GetAppUsageStats(ctx context.Context, appID string, timeframe s
 	return e.storage.GetAppUsageStats(ctx, appID, timeframe)
 }
 
+func (e *Engine) GetAppDocumentStats(ctx context.Context, appID string, timeframe string) ([]storage.AppUsageStat, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	// Cast the SQLite storage and call the method
+	if sqlite, ok := e.storage.(*storage.SQLiteStorage); ok {
+		return sqlite.GetAppDocumentStats(ctx, appID, timeframe)
+	}
+	return nil, fmt.Errorf("document stats not supported for this storage backend")
+}
+
 func (e *Engine) GetAppSessionHistory(ctx context.Context, appID string, limit int) ([]storage.SessionRecord, error) {
 	if e.storage == nil {
 		return nil, fmt.Errorf("storage is not configured")
 	}
 	return e.storage.GetAppSessionHistory(ctx, appID, limit)
+}
+
+func (e *Engine) GetActiveSessionDates(ctx context.Context, appID string) ([]string, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return e.storage.GetActiveSessionDates(ctx, appID)
+}
+
+func (e *Engine) GetActiveSessionHours(ctx context.Context, appID string, date string) ([]int, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return e.storage.GetActiveSessionHours(ctx, appID, date)
+}
+
+func (e *Engine) GetAppSessionsByTime(ctx context.Context, appID string, date string, hour int) ([]storage.SessionRecord, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return e.storage.GetAppSessionsByTime(ctx, appID, date, hour)
 }
 
 func (e *Engine) Stop() error {
