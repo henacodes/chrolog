@@ -7,8 +7,12 @@ import (
 	"path/filepath"
 
 	"chrolog/internal/engine"
-	"chrolog/internal/icons"
 	"chrolog/internal/storage"
+	"chrolog/internal/icons"
+
+	"github.com/emersion/go-autostart"
+	"github.com/energye/systray"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -41,6 +45,59 @@ func (a *App) startup(ctx context.Context) {
 	if err := a.engine.Start(ctx); err != nil {
 		fmt.Printf("[chrolog startup warning] engine start error: %v\n", err)
 	}
+
+	// Start the system tray tightly coupled to Wails' GTK main loop
+	start, _ := systray.RunWithExternalLoop(a.onReady, a.onExit)
+	start()
+}
+
+func (a *App) getAutostartApp() *autostart.App {
+	executable, _ := os.Executable()
+	return &autostart.App{
+		Name:        "chrolog",
+		DisplayName: "Chrolog Time Tracker",
+		Exec:        []string{executable},
+	}
+}
+
+func (a *App) onReady() {
+	systray.SetIcon(icon)
+	systray.SetTitle("Chrolog")
+	systray.SetTooltip("Chrolog Time Tracker")
+
+	mShow := systray.AddMenuItem("Show Dashboard", "Open the Chrolog dashboard")
+	
+	mAutostart := systray.AddMenuItemCheckbox("Run on Startup", "Automatically start Chrolog when you log in", false)
+	autoApp := a.getAutostartApp()
+	if autoApp.IsEnabled() {
+		mAutostart.Check()
+	}
+
+	systray.AddSeparator()
+	mQuit := systray.AddMenuItem("Quit", "Quit Chrolog")
+
+	mShow.Click(func() {
+		runtime.WindowShow(a.ctx)
+	})
+
+	mAutostart.Click(func() {
+		if mAutostart.Checked() {
+			_ = autoApp.Disable()
+			mAutostart.Uncheck()
+		} else {
+			_ = autoApp.Enable()
+			mAutostart.Check()
+		}
+	})
+
+	mQuit.Click(func() {
+		systray.Quit()
+		runtime.Quit(a.ctx)
+	})
+}
+
+func (a *App) onExit() {
+	// Clean up tray if needed
 }
 
 // shutdown is called when the app terminates.

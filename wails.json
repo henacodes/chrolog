@@ -9,5 +9,12 @@
   "author": {
     "name": "Kirakos",
     "email": "henacodes@gmail.com"
+  },
+  "info": {
+    "companyName": "henacodes",
+    "productName": "Chrolog",
+    "productVersion": "0.0.1",
+    "copyright": "Copyright 2026",
+    "comments": "A robust desktop activity tracker"
   }
 }
