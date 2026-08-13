@@ -22,17 +22,23 @@ mkdir -p "$ICON_DIR"
 echo "[2/4] Downloading latest binary from GitHub..."
 DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/chrolog"
 
-if ! curl -sLf "$DOWNLOAD_URL" -o "$INSTALL_DIR/chrolog"; then
+if ! curl -sLf "$DOWNLOAD_URL" -o "$INSTALL_DIR/chrolog.tmp"; then
     echo "Error: Failed to download the binary. Are you sure you published a GitHub Release with a 'chrolog' asset?"
     exit 1
 fi
+mv -f "$INSTALL_DIR/chrolog.tmp" "$INSTALL_DIR/chrolog"
 chmod +x "$INSTALL_DIR/chrolog"
 
-# 3. Download the icon from the master branch
+# 3. Get the icon
 echo "[3/4] Fetching application icon..."
-ICON_URL="https://raw.githubusercontent.com/$REPO/master/build/appicon.png"
-if ! curl -sLf "$ICON_URL" -o "$ICON_DIR/chrolog.png"; then
-    echo "Warning: Could not download the icon. The application menu will show a generic icon."
+if [ -f "build/appicon.png" ]; then
+    cp "build/appicon.png" "$ICON_DIR/chrolog.png"
+    echo "Copied local icon."
+else
+    ICON_URL="https://raw.githubusercontent.com/$REPO/master/build/appicon.png"
+    if ! curl -sLf "$ICON_URL" -o "$ICON_DIR/chrolog.png"; then
+        echo "Warning: Could not download the icon. The application menu will show a generic icon."
+    fi
 fi
 
 # 4. Create the .desktop configuration file
