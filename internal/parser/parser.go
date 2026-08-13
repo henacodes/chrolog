@@ -16,7 +16,9 @@ func ExtractContext(appName, windowTitle string) map[string]string {
 		// Sometimes: "filename - project (Workspace) - Visual Studio Code"
 		parts := strings.Split(windowTitle, " - ")
 		if len(parts) >= 1 {
-			ctx["document"] = parts[0]
+			doc := strings.TrimSpace(parts[0])
+			doc = strings.TrimPrefix(doc, "● ")
+			ctx["document"] = doc
 		}
 		if len(parts) >= 3 {
 			// e.g. ["AppDetails.tsx", "chrolog", "Visual Studio Code"]

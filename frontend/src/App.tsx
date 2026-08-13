@@ -8,6 +8,33 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { AppDetails } from "@/components/AppDetails"
 import "./style.css"
 
+const LanguageIcon = ({ language }: { language: string }) => {
+  const [error, setError] = useState(false);
+  if (!language) return null;
+  
+  let lang = language.toLowerCase();
+  if (lang === 'ts') lang = 'typescript';
+  if (lang === 'js') lang = 'javascript';
+  if (lang === 'cpp') lang = 'cplusplus';
+  if (lang === 'cs') lang = 'csharp';
+  if (lang === 'py') lang = 'python';
+  if (lang === 'rs') lang = 'rust';
+  
+  if (error) {
+    return <div className="w-4 h-4 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-[8px] font-bold text-slate-500 uppercase">{language.substring(0, 2)}</div>;
+  }
+  
+  return (
+    <img 
+      src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${lang}/${lang}-original.svg`}
+      className="w-4 h-4 object-contain"
+      onError={() => setError(true)}
+      alt={language}
+      title={language}
+    />
+  );
+};
+
 interface SessionRecord {
   id: number
   app_id: string
@@ -43,6 +70,7 @@ export default function App() {
   const [isPaused, setIsPaused] = useState<boolean>(false)
   const [timeframe, setTimeframe] = useState<string>("today")
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
+  const [refreshKey, setRefreshKey] = useState<number>(0)
 
   // App Details state
   const [activeAppId, setActiveAppId] = useState<string | null>(null)
@@ -51,6 +79,7 @@ export default function App() {
 
   const fetchData = async () => {
     setIsRefreshing(true)
+    setRefreshKey(prev => prev + 1)
     try {
       if (wails) {
         const curr = await wails.GetCurrentSession()
@@ -100,8 +129,11 @@ export default function App() {
   useEffect(() => {
     fetchData()
 
+    let unsubActivity: any = null
+    let unsubSession: any = null
+
     if (wailsRuntime?.EventsOn) {
-      const unsubActivity = wailsRuntime.EventsOn("activity:changed", (ev: any) => {
+      unsubActivity = wailsRuntime.EventsOn("activity:changed", (ev: any) => {
         setCurrentSession((prev) => {
           if (!prev || prev.app_id !== ev.app_id || prev.window_title !== ev.window_title) {
             return {
@@ -113,23 +145,25 @@ export default function App() {
               started_at: ev.timestamp,
               ended_at: ev.timestamp,
               duration_seconds: 0,
+              metadata: ev.metadata || {},
             }
+          }
+          // Always update metadata in case it changed without window title changing
+          if (ev.metadata && prev.metadata !== ev.metadata) {
+            return { ...prev, metadata: ev.metadata }
           }
           return prev
         })
       })
 
-      const unsubSession = wailsRuntime.EventsOn("session:updated", (session: SessionRecord) => {
+      unsubSession = wailsRuntime.EventsOn("session:updated", (session: SessionRecord) => {
         setCurrentSession(session)
       })
+    }
 
-      return () => {
-        unsubActivity && unsubActivity()
-        unsubSession && unsubSession()
-      }
-    } else {
-      const interval = setInterval(fetchData, 3000)
-      return () => clearInterval(interval)
+    return () => {
+      if (unsubActivity) unsubActivity()
+      if (unsubSession) unsubSession()
     }
   }, [timeframe])
 
@@ -237,7 +271,7 @@ export default function App() {
         </header>
 
         {activeAppId ? (
-          <AppDetails appId={activeAppId} appName={activeAppName} appIcon={iconCache[activeAppId]} onBack={() => setActiveAppId(null)} />
+          <AppDetails appId={activeAppId} appName={activeAppName} appIcon={iconCache[activeAppId]} refreshKey={refreshKey} onBack={() => setActiveAppId(null)} />
         ) : (
           <div className="space-y-6">
             {/* Hero Active Focus Card */}
@@ -264,6 +298,54 @@ export default function App() {
                   <div className="p-4 rounded-none bg-background border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 truncate shadow-none">
                     {currentSession?.window_title || "Untitled Focus State"}
                   </div>
+                  
+                  {/* Metadata Rich UI */}
+                  {currentSession?.metadata && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {currentSession.metadata.category && (
+                        <Badge variant="secondary" className="text-xs uppercase font-black px-2 py-1 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {currentSession.metadata.category}
+                        </Badge>
+                      )}
+                      
+                      {currentSession.metadata.project && currentSession.metadata.document && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-none shadow-sm">
+                          {currentSession.metadata.language && (
+                            <LanguageIcon language={currentSession.metadata.language} />
+                          )}
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {currentSession.metadata.project}
+                            <span className="text-slate-400 dark:text-slate-500 mx-1.5">/</span>
+                            <span className="font-mono text-primary dark:text-primary">{currentSession.metadata.document}</span>
+                          </span>
+                        </div>
+                      )}
+                      
+                      {(() => {
+                        if (!currentSession.metadata.platform_specific) return null;
+                        try {
+                          const platform = JSON.parse(currentSession.metadata.platform_specific);
+                          if (platform.youtube) {
+                            const yt = platform.youtube;
+                            const formatTime = (secs: number) => {
+                              const m = Math.floor(secs / 60);
+                              const s = secs % 60;
+                              return `${m}:${s.toString().padStart(2, '0')}`;
+                            };
+                            return (
+                              <Badge variant="outline" className={`text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 text-slate-500'}`}>
+                                {yt.is_playing ? '▶️ PLAYING' : '⏸️ PAUSED'} {yt.current_time_seconds > 0 ? `• ${formatTime(yt.current_time_seconds)}` : ''} 
+                                {yt.channel_name ? ` • ${yt.channel_name}` : ''}
+                              </Badge>
+                            );
+                          }
+                        } catch (e) {
+                          return null;
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-end justify-between gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                     <div>
@@ -317,39 +399,98 @@ export default function App() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {appStats.length > 0 ? (
-                  appStats.map((stat) => (
-                    <div
-                      key={stat.app_id}
-                      className="space-y-2 p-3 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                      onClick={() => {
-                        setActiveAppId(stat.app_id)
-                        setActiveAppName(stat.app_name || stat.app_id)
-                      }}
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-3">
-                          {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
-                            <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-none object-contain" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
-                              {stat.app_name?.substring(0, 2) || stat.app_id.substring(0, 2)}
-                            </div>
-                          )}
-                          <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">
-                            {stat.app_name || stat.app_id}
-                          </span>
+                {(() => {
+                  let liveStats = [...appStats].map(s => ({ ...s }))
+                  let activeAppFound = false
+
+                  if (currentSession && currentSession.duration_seconds > 0) {
+                    for (let i = 0; i < liveStats.length; i++) {
+                      if (liveStats[i].app_id === currentSession.app_id) {
+                        liveStats[i].total_duration_seconds += currentSession.duration_seconds
+                        activeAppFound = true
+                        break
+                      }
+                    }
+
+                    if (!activeAppFound) {
+                      liveStats.push({
+                        app_id: currentSession.app_id,
+                        app_name: currentSession.app_name,
+                        total_duration_seconds: currentSession.duration_seconds,
+                        percentage: 0
+                      })
+                    }
+
+                    const total = liveStats.reduce((acc, curr) => acc + curr.total_duration_seconds, 0)
+                    liveStats.forEach(stat => {
+                      stat.percentage = total > 0 ? (stat.total_duration_seconds / total) * 100 : 0
+                    })
+                    liveStats.sort((a, b) => b.total_duration_seconds - a.total_duration_seconds)
+                  }
+                  return liveStats
+                })().length > 0 ? (
+                  (() => {
+                    let liveStats = [...appStats].map(s => ({ ...s }))
+                    let activeAppFound = false
+
+                    if (currentSession && currentSession.duration_seconds > 0) {
+                      for (let i = 0; i < liveStats.length; i++) {
+                        if (liveStats[i].app_id === currentSession.app_id) {
+                          liveStats[i].total_duration_seconds += currentSession.duration_seconds
+                          activeAppFound = true
+                          break
+                        }
+                      }
+
+                      if (!activeAppFound) {
+                        liveStats.push({
+                          app_id: currentSession.app_id,
+                          app_name: currentSession.app_name,
+                          total_duration_seconds: currentSession.duration_seconds,
+                          percentage: 0
+                        })
+                      }
+
+                      const total = liveStats.reduce((acc, curr) => acc + curr.total_duration_seconds, 0)
+                      liveStats.forEach(stat => {
+                        stat.percentage = total > 0 ? (stat.total_duration_seconds / total) * 100 : 0
+                      })
+                      liveStats.sort((a, b) => b.total_duration_seconds - a.total_duration_seconds)
+                    }
+
+                    return liveStats.map((stat) => (
+                      <div
+                        key={stat.app_id}
+                        className="space-y-2 p-3 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        onClick={() => {
+                          setActiveAppId(stat.app_id)
+                          setActiveAppName(stat.app_name || stat.app_id)
+                        }}
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-3">
+                            {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
+                              <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-none object-contain" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
+                                {stat.app_name?.substring(0, 2) || stat.app_id.substring(0, 2)}
+                              </div>
+                            )}
+                            <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">
+                              {stat.app_name || stat.app_id}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs font-mono">
+                            <span className="text-slate-600 dark:text-slate-400 font-semibold">{formatDuration(stat.total_duration_seconds)}</span>
+                            <span className="font-black text-primary dark:text-primary w-12 text-right">
+                              {stat.percentage.toFixed(1)}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 text-xs font-mono">
-                          <span className="text-slate-600 dark:text-slate-400 font-semibold">{formatDuration(stat.total_duration_seconds)}</span>
-                          <span className="font-black text-primary dark:text-primary w-12 text-right">
-                            {stat.percentage.toFixed(1)}%
-                          </span>
-                        </div>
+                        <Progress value={stat.percentage} />
                       </div>
-                      <Progress value={stat.percentage} />
-                    </div>
-                  ))
+                    ))
+                  })()
                 ) : (
                   <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-sm font-semibold">
                     No activity recorded for this timeframe yet.

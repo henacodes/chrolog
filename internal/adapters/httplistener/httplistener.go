@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"chrolog/internal/icons"
 	"chrolog/pkg/tracker"
 )
 
@@ -25,6 +26,8 @@ type HTTPPayload struct {
 	AppName     string            `json:"app_name"`
 	WindowTitle string            `json:"window_title"`
 	Source      string            `json:"source"`
+	URL         string            `json:"url"`
+	Favicon     string            `json:"favicon"`
 	Metadata    map[string]string `json:"metadata"`
 }
 
@@ -96,7 +99,12 @@ func (a *Adapter) handleEvent(w http.ResponseWriter, r *http.Request) {
 		AppName:     payload.AppName,
 		WindowTitle: payload.WindowTitle,
 		Source:      source,
+		URL:         payload.URL,
 		Metadata:    payload.Metadata,
+	}
+
+	if payload.Favicon != "" {
+		icons.CacheIconFromURL(payload.AppID, payload.Favicon)
 	}
 
 	a.mu.Lock()

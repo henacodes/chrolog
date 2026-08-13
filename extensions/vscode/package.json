@@ -1,0 +1,34 @@
+{
+  "name": "chrolog-vscode",
+  "displayName": "Chrolog Desktop Activity Tracker",
+  "description": "Extracts rich editor telemetry to send to the local Chrolog desktop app.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henacodes/chrolog"
+  },
+  "version": "1.0.0",
+  "publisher": "henacodes",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": []
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.34",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.1.3"
+  }
+}

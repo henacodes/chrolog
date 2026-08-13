@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +16,40 @@ var (
 	iconCache = make(map[string]string)
 	mu        sync.RWMutex
 )
+
+// CacheIconFromURL downloads and caches an icon in the background
+func CacheIconFromURL(appID, iconURL string) {
+	mu.RLock()
+	_, exists := iconCache[appID]
+	mu.RUnlock()
+	if exists || iconURL == "" {
+		return
+	}
+
+	go func() {
+		resp, err := http.Get(iconURL)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return
+		}
+
+		mimeType := http.DetectContentType(data)
+		if strings.HasSuffix(iconURL, ".svg") {
+			mimeType = "image/svg+xml"
+		}
+		b64 := base64.StdEncoding.EncodeToString(data)
+		dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, b64)
+
+		mu.Lock()
+		iconCache[appID] = dataURI
+		mu.Unlock()
+	}()
+}
 
 // GetAppIcon resolves the app_id to a base64 encoded data URI.
 // E.g., data:image/png;base64,...

@@ -40,6 +40,7 @@ export namespace storage {
 	export class AppUsageStat {
 	    label: string;
 	    duration_seconds: number;
+	    url: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppUsageStat(source);
@@ -49,6 +50,7 @@ export namespace storage {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.label = source["label"];
 	        this.duration_seconds = source["duration_seconds"];
+	        this.url = source["url"];
 	    }
 	}
 	export class SessionRecord {
@@ -57,6 +59,7 @@ export namespace storage {
 	    app_name: string;
 	    window_title: string;
 	    source: string;
+	    url: string;
 	    // Go type: time
 	    started_at: any;
 	    // Go type: time
@@ -75,6 +78,7 @@ export namespace storage {
 	        this.app_name = source["app_name"];
 	        this.window_title = source["window_title"];
 	        this.source = source["source"];
+	        this.url = source["url"];
 	        this.started_at = this.convertValues(source["started_at"], null);
 	        this.ended_at = this.convertValues(source["ended_at"], null);
 	        this.duration_seconds = source["duration_seconds"];

@@ -11,5 +11,6 @@ type NormalizedEvent struct {
 	AppName     string            `json:"app_name"`     // Human-readable application title
 	WindowTitle string            `json:"window_title"` // Active window title/caption
 	Source      string            `json:"source"`       // Tracker adapter name (e.g. "hyprland", "x11", "win32", "http_listener")
+	URL         string            `json:"url"`          // Full URL for browser sessions
 	Metadata    map[string]string `json:"metadata"`     // Optional additional contextual key-value tags
 }

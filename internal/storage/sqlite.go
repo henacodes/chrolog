@@ -67,6 +67,10 @@ func (s *SQLiteStorage) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to execute schema initialization: %w", err)
 	}
 
+	// Try to add the URL column for backward compatibility (ignore error if exists)
+	_, _ = db.ExecContext(ctx, `ALTER TABLE sessions ADD COLUMN url TEXT DEFAULT ''`)
+	_, _ = db.ExecContext(ctx, `ALTER TABLE raw_events ADD COLUMN url TEXT DEFAULT ''`)
+
 	s.db = db
 	return nil
 }
@@ -82,8 +86,8 @@ func (s *SQLiteStorage) SaveSession(ctx context.Context, session SessionRecord) 
 	metaJSON, _ := json.Marshal(session.Metadata)
 
 	query := `
-	INSERT INTO sessions (app_id, app_name, window_title, source, started_at, ended_at, duration_seconds, metadata_json)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO sessions (app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := s.db.ExecContext(ctx, query,
@@ -91,6 +95,7 @@ func (s *SQLiteStorage) SaveSession(ctx context.Context, session SessionRecord) 
 		session.AppName,
 		session.WindowTitle,
 		session.Source,
+		session.URL,
 		session.StartedAt.Format(time.RFC3339Nano),
 		session.EndedAt.Format(time.RFC3339Nano),
 		session.DurationSeconds,
@@ -114,8 +119,8 @@ func (s *SQLiteStorage) SaveRawEvent(ctx context.Context, event tracker.Normaliz
 	metaJSON, _ := json.Marshal(event.Metadata)
 
 	query := `
-	INSERT INTO raw_events (timestamp, app_id, app_name, window_title, source, metadata_json)
-	VALUES (?, ?, ?, ?, ?, ?)
+	INSERT INTO raw_events (timestamp, app_id, app_name, window_title, source, url, metadata_json)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := s.db.ExecContext(ctx, query,
@@ -124,6 +129,7 @@ func (s *SQLiteStorage) SaveRawEvent(ctx context.Context, event tracker.Normaliz
 		event.AppName,
 		event.WindowTitle,
 		event.Source,
+		event.URL,
 		string(metaJSON),
 	)
 	if err != nil {
@@ -146,7 +152,7 @@ func (s *SQLiteStorage) GetRecentSessions(ctx context.Context, limit int) ([]Ses
 	}
 
 	query := `
-	SELECT id, app_id, app_name, window_title, source, started_at, ended_at, duration_seconds, metadata_json
+	SELECT id, app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json
 	FROM sessions
 	ORDER BY started_at DESC
 	LIMIT ?
@@ -169,6 +175,7 @@ func (s *SQLiteStorage) GetRecentSessions(ctx context.Context, limit int) ([]Ses
 			&r.AppName,
 			&r.WindowTitle,
 			&r.Source,
+			&r.URL,
 			&startedAtStr,
 			&endedAtStr,
 			&r.DurationSeconds,
@@ -309,7 +316,7 @@ func (s *SQLiteStorage) GetAppSessionsByTime(ctx context.Context, appID string, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	query := `
-		SELECT id, app_id, app_name, window_title, source, started_at, ended_at, duration_seconds 
+		SELECT id, app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json 
 		FROM sessions 
 		WHERE app_id = ? AND date(started_at) = ?
 	`
@@ -331,10 +338,10 @@ func (s *SQLiteStorage) GetAppSessionsByTime(ctx context.Context, appID string, 
 	var records []SessionRecord
 	for rows.Next() {
 		var rec SessionRecord
-		var startedAtStr, endedAtStr string
+		var startedAtStr, endedAtStr, metaJSON string
 		if err := rows.Scan(
-			&rec.ID, &rec.AppID, &rec.AppName, &rec.WindowTitle, &rec.Source,
-			&startedAtStr, &endedAtStr, &rec.DurationSeconds,
+			&rec.ID, &rec.AppID, &rec.AppName, &rec.WindowTitle, &rec.Source, &rec.URL,
+			&startedAtStr, &endedAtStr, &rec.DurationSeconds, &metaJSON,
 		); err != nil {
 			return nil, err
 		}
@@ -343,6 +350,9 @@ func (s *SQLiteStorage) GetAppSessionsByTime(ctx context.Context, appID string, 
 		}
 		if t, err := time.Parse(time.RFC3339Nano, endedAtStr); err == nil {
 			rec.EndedAt = t
+		}
+		if metaJSON != "" {
+			_ = json.Unmarshal([]byte(metaJSON), &rec.Metadata)
 		}
 		records = append(records, rec)
 	}
@@ -362,7 +372,7 @@ func (s *SQLiteStorage) GetAppSessionHistory(ctx context.Context, appID string, 
 	}
 
 	query := `
-	SELECT id, app_id, app_name, window_title, source, started_at, ended_at, duration_seconds, metadata_json
+	SELECT id, app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json
 	FROM sessions
 	WHERE app_id = ?
 	ORDER BY started_at DESC
@@ -381,7 +391,7 @@ func (s *SQLiteStorage) GetAppSessionHistory(ctx context.Context, appID string, 
 		var startedAtStr, endedAtStr, metaJSON string
 
 		err := rows.Scan(
-			&r.ID, &r.AppID, &r.AppName, &r.WindowTitle, &r.Source,
+			&r.ID, &r.AppID, &r.AppName, &r.WindowTitle, &r.Source, &r.URL,
 			&startedAtStr, &endedAtStr, &r.DurationSeconds, &metaJSON,
 		)
 		if err != nil {
@@ -517,15 +527,19 @@ func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, t
 	SELECT 
 	  CASE 
 	    WHEN json_extract(metadata_json, '$.project') IS NOT NULL 
-	    THEN json_extract(metadata_json, '$.project') || ' / ' || json_extract(metadata_json, '$.document')
-	    ELSE json_extract(metadata_json, '$.document')
+	    THEN json_extract(metadata_json, '$.project') || ' / ' || COALESCE(json_extract(metadata_json, '$.document'), window_title)
+	    WHEN json_extract(metadata_json, '$.document') IS NOT NULL
+	    THEN json_extract(metadata_json, '$.document')
+	    ELSE window_title
 	  END as doc, 
-	  SUM(duration_seconds) as duration
+	  SUM(duration_seconds) as duration,
+	  MAX(url) as url
 	FROM sessions
-	WHERE app_id = ? AND started_at >= ? AND json_extract(metadata_json, '$.document') IS NOT NULL
+	WHERE app_id = ? AND started_at >= ?
 	GROUP BY doc
+	HAVING duration >= 5
 	ORDER BY duration DESC
-	LIMIT 25
+	LIMIT 100
 	`
 
 	rows, err := s.db.QueryContext(ctx, query, appID, since.Format(time.RFC3339Nano))
@@ -537,7 +551,7 @@ func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, t
 	var stats []AppUsageStat
 	for rows.Next() {
 		var s AppUsageStat
-		if err := rows.Scan(&s.Label, &s.DurationSeconds); err != nil {
+		if err := rows.Scan(&s.Label, &s.DurationSeconds, &s.URL); err != nil {
 			return nil, fmt.Errorf("failed to scan document stat row: %w", err)
 		}
 		stats = append(stats, s)

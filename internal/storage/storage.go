@@ -14,6 +14,7 @@ type SessionRecord struct {
 	AppName         string            `json:"app_name"`
 	WindowTitle     string            `json:"window_title"`
 	Source          string            `json:"source"`
+	URL             string            `json:"url"`
 	StartedAt       time.Time         `json:"started_at"`
 	EndedAt         time.Time         `json:"ended_at"`
 	DurationSeconds int64             `json:"duration_seconds"`
@@ -32,6 +33,7 @@ type AppStatRecord struct {
 type AppUsageStat struct {
 	Label           string `json:"label"`
 	DurationSeconds int64  `json:"duration_seconds"`
+	URL             string `json:"url"`
 }
 
 // Storage is the interface for persisting normalized events and session records.

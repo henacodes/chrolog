@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type Engine struct {
 	storage        storage.Storage
 	eventChan      chan tracker.NormalizedEvent
 	activeSession  *storage.SessionRecord
+	priorityStates map[int]*tracker.NormalizedEvent
 	wailsCtx       context.Context
 	mu             sync.Mutex
 	cancel         context.CancelFunc
@@ -36,6 +38,7 @@ func NewEngine(store storage.Storage) *Engine {
 	return &Engine{
 		storage:        store,
 		eventChan:      make(chan tracker.NormalizedEvent, 256),
+		priorityStates: make(map[int]*tracker.NormalizedEvent),
 		minSessionSecs: 1, // Minimum session length to persist (in seconds)
 	}
 }
@@ -133,6 +136,15 @@ func (e *Engine) processEvents(ctx context.Context) {
 	}
 }
 
+func getPriority(source string) int {
+	switch source {
+	case "http_listener", "browser_extension":
+		return 20 // High priority plugins
+	default:
+		return 10 // Base OS trackers
+	}
+}
+
 func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.NormalizedEvent) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -141,25 +153,114 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		return
 	}
 
+	// Update priority state
+	priority := getPriority(ev.Source)
+	if ev.AppID == "" && ev.WindowTitle == "" {
+		// Clear state for this priority
+		delete(e.priorityStates, priority)
+	} else {
+		// Store the event for this priority
+		e.priorityStates[priority] = &ev
+	}
+
+	// Determine the target event by correlating OS state with Extension state
+	var targetEvent *tracker.NormalizedEvent
+
+	osEvent := e.priorityStates[10]
+	extEvent := e.priorityStates[20]
+
+	if osEvent != nil {
+		targetEvent = osEvent
+
+		// Check if the currently focused OS application is a web browser
+		appName := strings.ToLower(osEvent.AppName)
+		isBrowser := false
+		browsers := []string{"chrome", "firefox", "brave", "edge", "safari", "opera", "browser"}
+		for _, b := range browsers {
+			if strings.Contains(appName, b) {
+				isBrowser = true
+				break
+			}
+		}
+
+		isValidEnrichment := false
+		if extEvent != nil {
+			if isBrowser && extEvent.Source == "browser_extension" {
+				isValidEnrichment = true
+			} else if extEvent.Source != "browser_extension" {
+				// For non-browsers (like VS Code), check if the OS app matches the extension AppID
+				if strings.Contains(appName, strings.ToLower(extEvent.AppID)) || strings.ToLower(osEvent.AppID) == strings.ToLower(extEvent.AppID) {
+					isValidEnrichment = true
+				}
+			}
+		}
+
+		// If the OS window matches the extension data, enrich it!
+		if isValidEnrichment {
+			enrichedEvent := *osEvent
+			enrichedEvent.WindowTitle = extEvent.WindowTitle
+			enrichedEvent.URL = extEvent.URL
+			enrichedEvent.Source = extEvent.Source // Mark as enriched
+
+			// Deep copy the metadata map to prevent mutating the persistent OS state
+			newMeta := make(map[string]string)
+			if osEvent.Metadata != nil {
+				for k, v := range osEvent.Metadata {
+					newMeta[k] = v
+				}
+			}
+			for k, v := range extEvent.Metadata {
+				newMeta[k] = v
+			}
+			
+			// Use the extension's hostname/project as the project
+			if proj, ok := extEvent.Metadata["project"]; ok && proj != "" {
+				newMeta["project"] = proj
+			} else {
+				newMeta["project"] = extEvent.AppID
+			}
+			
+			// Use the page title as the document
+			newMeta["document"] = extEvent.WindowTitle
+
+			enrichedEvent.Metadata = newMeta
+			targetEvent = &enrichedEvent
+		}
+	} else if extEvent != nil {
+		// Fallback: If no OS tracker is running, just use extension data directly
+		targetEvent = extEvent
+	}
+
+	if targetEvent == nil {
+		// No active tracking events (e.g., focus lost everywhere)
+		return
+	}
+
 	// Emit activity:changed event to Wails frontend subscribers
 	if e.wailsCtx != nil {
-		wailsRuntime.EventsEmit(e.wailsCtx, "activity:changed", ev)
+		wailsRuntime.EventsEmit(e.wailsCtx, "activity:changed", *targetEvent)
 	}
 
 	// Optionally log raw event if storage supports it
 	if e.storage != nil {
-		_ = e.storage.SaveRawEvent(ctx, ev)
-	}
-
-	// Ignore empty event noise
-	if ev.AppID == "" && ev.WindowTitle == "" {
-		return
+		_ = e.storage.SaveRawEvent(ctx, *targetEvent)
 	}
 
 	// Check if this event matches the current active session (Deduplication)
 	if e.activeSession != nil {
-		if e.activeSession.AppID == ev.AppID && e.activeSession.WindowTitle == ev.WindowTitle {
-			// Deduplicated! Update session end timestamp and duration
+		isSameApp := e.activeSession.AppID == targetEvent.AppID
+		isSameWindow := e.activeSession.WindowTitle == targetEvent.WindowTitle
+		
+		// Check if platform specific state changed (e.g. video paused/played)
+		isSamePlatformState := true
+		if e.activeSession.Metadata != nil && targetEvent.Metadata != nil {
+			if e.activeSession.Metadata["platform_specific"] != targetEvent.Metadata["platform_specific"] {
+				isSamePlatformState = false
+			}
+		}
+
+		if isSameApp && isSameWindow && isSamePlatformState {
+			// Deduplicated! Update session end timestamp and duration based on incoming event
 			e.activeSession.EndedAt = ev.Timestamp
 			e.activeSession.DurationSeconds = int64(ev.Timestamp.Sub(e.activeSession.StartedAt).Seconds())
 			return
@@ -175,27 +276,28 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 	}
 
 	// Extract sub-context (document/tab/project) from window title
-	ctxData := parser.ExtractContext(ev.AppName, ev.WindowTitle)
+	ctxData := parser.ExtractContext(targetEvent.AppName, targetEvent.WindowTitle)
 	
-	meta := ev.Metadata
+	meta := targetEvent.Metadata
 	if meta == nil {
 		meta = make(map[string]string)
 	}
 
 	for k, v := range ctxData {
-		if v != "" && v != ev.WindowTitle {
+		if v != "" && v != targetEvent.WindowTitle {
 			meta[k] = v
 		}
 	}
 
-	// Start new session span
+	// Start new session span using the timestamp of the event that caused the transition
 	e.activeSession = &storage.SessionRecord{
-		AppID:           ev.AppID,
-		AppName:         ev.AppName,
-		WindowTitle:     ev.WindowTitle,
-		Source:          ev.Source,
-		StartedAt:       ev.Timestamp,
-		EndedAt:         ev.Timestamp,
+		AppID:           targetEvent.AppID,
+		AppName:         targetEvent.AppName,
+		WindowTitle:     targetEvent.WindowTitle,
+		Source:          targetEvent.Source,
+		URL:             targetEvent.URL,
+		StartedAt:       targetEvent.Timestamp,
+		EndedAt:         targetEvent.Timestamp,
 		DurationSeconds: 0,
 		Metadata:        meta,
 	}
