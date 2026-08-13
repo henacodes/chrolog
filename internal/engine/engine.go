@@ -32,6 +32,7 @@ type Engine struct {
 	running        bool
 	paused         bool
 	minSessionSecs int64
+	osTrackerSeen  time.Time
 }
 
 func NewEngine(store storage.Storage) *Engine {
@@ -155,6 +156,10 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 
 	// Update priority state
 	priority := getPriority(ev.Source)
+	if priority == 10 {
+		e.osTrackerSeen = time.Now()
+	}
+
 	if ev.AppID == "" && ev.WindowTitle == "" {
 		// Clear state for this priority
 		delete(e.priorityStates, priority)
@@ -227,8 +232,34 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 			targetEvent = &enrichedEvent
 		}
 	} else if extEvent != nil {
-		// Fallback: If no OS tracker is running, just use extension data directly
-		targetEvent = extEvent
+		// Fallback: If no OS tracker is running, just use extension data directly.
+		// ONLY fallback if we haven't seen the OS tracker recently.
+		// If the OS tracker is active but reports no window (empty state),
+		// we should trust it and NOT fallback to the extension.
+		if time.Since(e.osTrackerSeen) > 5*time.Second {
+			fallbackEvent := *extEvent
+			
+			newMeta := make(map[string]string)
+			if extEvent.Metadata != nil {
+				for k, v := range extEvent.Metadata {
+					newMeta[k] = v
+				}
+			}
+			
+			if proj, ok := extEvent.Metadata["project"]; ok && proj != "" {
+				newMeta["project"] = proj
+			} else {
+				newMeta["project"] = extEvent.AppID
+			}
+			newMeta["document"] = extEvent.WindowTitle
+			
+			fallbackEvent.Metadata = newMeta
+			// Normalize to a generic browser app so it looks correct in the UI
+			fallbackEvent.AppID = "browser"
+			fallbackEvent.AppName = "Browser"
+			
+			targetEvent = &fallbackEvent
+		}
 	}
 
 	if targetEvent == nil {
@@ -398,6 +429,17 @@ func (e *Engine) GetAppUsageStats(ctx context.Context, appID string, timeframe s
 		return nil, fmt.Errorf("storage is not configured")
 	}
 	return e.storage.GetAppUsageStats(ctx, appID, timeframe)
+}
+
+func (e *Engine) GetGlobalTrendStats(ctx context.Context, days int) ([]storage.AppUsageStat, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage not configured")
+	}
+	// Cast to SQLite Storage and call method
+	if sqlite, ok := e.storage.(*storage.SQLiteStorage); ok {
+		return sqlite.GetGlobalTrendStats(ctx, days)
+	}
+	return nil, fmt.Errorf("trend stats not supported for this backend")
 }
 
 func (e *Engine) GetAppDocumentStats(ctx context.Context, appID string, timeframe string) ([]storage.AppUsageStat, error) {

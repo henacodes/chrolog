@@ -41,6 +41,12 @@ export function DocumentTimeline({ appId, project, document, appIcon }: Document
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -242,6 +248,22 @@ export function DocumentTimeline({ appId, project, document, appIcon }: Document
                     />
                   )
                 })
+              })()}
+
+              {/* Current time indicator */}
+              {selectedDate === format(currentTime, 'yyyy-MM-dd') && (() => {
+                const dayStart = startOfDay(currentTime)
+                const currentSec = differenceInSeconds(currentTime, dayStart)
+                const left = (currentSec / 86400) * 100
+                return (
+                  <div 
+                    className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-10 opacity-75"
+                    style={{ left: `${left}%` }}
+                    title={`Current Time: ${format(currentTime, 'h:mm a')}`}
+                  >
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                )
               })()}
             </div>
           </div>

@@ -25,9 +25,22 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  Line
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from "recharts"
+
+const COLORS = [
+  '#558B2F', // Primary Green
+  '#0d9488', // Teal
+  '#d97706', // Amber
+  '#475569', // Slate
+  '#94a3b8', // Light Slate
+];
+
 import { GithubHeatmap } from "./GithubHeatmap"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { DocumentTimeline } from "./DocumentTimeline"
@@ -439,7 +452,13 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                         <Bar dataKey="duration_seconds" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     ) : (
-                      <RechartsLineChart data={stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <AreaChart data={stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorAppArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#558B2F" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#558B2F" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
                         <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => formatDuration(val)} />
@@ -447,8 +466,8 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                           contentStyle={{ backgroundColor: '#1C1F23', borderColor: '#2B3036', borderRadius: '0.75rem', color: '#F8FAFC', fontWeight: 'bold' }}
                           formatter={formatTooltip}
                         />
-                        <Line type="monotone" dataKey="duration_seconds" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: "var(--primary)" }} activeDot={{ r: 6 }} />
-                      </RechartsLineChart>
+                        <Area type="monotone" dataKey="duration_seconds" stroke="#558B2F" strokeWidth={3} fillOpacity={1} fill="url(#colorAppArea)" />
+                      </AreaChart>
                     )}
                   </ResponsiveContainer>
                 </div>
@@ -520,16 +539,62 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
 
                     const maxDuration = Math.max(...nestedDocs.map(d => d.totalDuration))
 
-                    return nestedDocs.map((group, idx) => (
-                      <AccordionItem 
-                        key={idx} 
-                        group={group} 
-                        appId={appId} 
-                        maxDuration={maxDuration} 
-                        formatDuration={formatDuration} 
-                        onSelectDocument={setActiveDocument}
-                      />
-                    ))
+                    return (
+                      <div className="flex flex-col gap-6">
+                        {/* Project Donut Chart */}
+                        {nestedDocs.length > 0 && (
+                          <div className="h-[220px] flex flex-col items-center justify-center relative bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-none p-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={nestedDocs.slice(0, 5)}
+                                  cx="50%"
+                                  cy="45%"
+                                  innerRadius={50}
+                                  outerRadius={70}
+                                  paddingAngle={2}
+                                  dataKey="totalDuration"
+                                  nameKey="project"
+                                  stroke="none"
+                                >
+                                  {nestedDocs.slice(0, 5).map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip 
+                                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px' }}
+                                  itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', fontSize: '12px' }}
+                                  formatter={(value: any, name: any) => [formatDuration(Number(value)), name]}
+                                />
+                                <Legend 
+                                  verticalAlign="bottom" 
+                                  height={30} 
+                                  iconType="circle"
+                                  wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', color: 'hsl(var(--muted-foreground))' }}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 top-[-5%] flex flex-col items-center justify-center pointer-events-none">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Top Projects</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Accordion List */}
+                        <div className="space-y-2">
+                          {nestedDocs.map((group, idx) => (
+                            <AccordionItem 
+                              key={idx} 
+                              group={group} 
+                              appId={appId} 
+                              maxDuration={maxDuration} 
+                              formatDuration={formatDuration} 
+                              onSelectDocument={setActiveDocument}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )
                   })()}
                 </div>
               ) : (

@@ -622,13 +622,43 @@ func (s *SQLiteStorage) GetAppUsageStats(ctx context.Context, appID string, time
 	}
 	defer rows.Close()
 
-	var stats []AppUsageStat
+	statMap := make(map[string]int64)
 	for rows.Next() {
-		var s AppUsageStat
-		if err := rows.Scan(&s.Label, &s.DurationSeconds); err != nil {
+		var label string
+		var duration int64
+		if err := rows.Scan(&label, &duration); err != nil {
 			return nil, fmt.Errorf("failed to scan usage stat row: %w", err)
 		}
-		stats = append(stats, s)
+		statMap[label] = duration
+	}
+
+	var stats []AppUsageStat
+	switch timeframe {
+	case "today":
+		for i := 0; i < 24; i++ {
+			hourStr := fmt.Sprintf("%02d:00", i)
+			stats = append(stats, AppUsageStat{Label: hourStr, DurationSeconds: statMap[hourStr]})
+		}
+	case "week":
+		for i := 6; i >= 0; i-- {
+			dateStr := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+			stats = append(stats, AppUsageStat{Label: dateStr, DurationSeconds: statMap[dateStr]})
+		}
+	case "month":
+		for i := 29; i >= 0; i-- {
+			dateStr := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+			stats = append(stats, AppUsageStat{Label: dateStr, DurationSeconds: statMap[dateStr]})
+		}
+	case "year":
+		for i := 364; i >= 0; i-- {
+			dateStr := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+			stats = append(stats, AppUsageStat{Label: dateStr, DurationSeconds: statMap[dateStr]})
+		}
+	default:
+		for i := 0; i < 24; i++ {
+			hourStr := fmt.Sprintf("%02d:00", i)
+			stats = append(stats, AppUsageStat{Label: hourStr, DurationSeconds: statMap[hourStr]})
+		}
 	}
 
 	return stats, nil
@@ -699,6 +729,59 @@ func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, t
 			return nil, fmt.Errorf("failed to scan document stat row: %w", err)
 		}
 		stats = append(stats, s)
+	}
+
+	return stats, nil
+}
+
+func (s *SQLiteStorage) GetGlobalTrendStats(ctx context.Context, days int) ([]AppUsageStat, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return nil, fmt.Errorf("storage database not initialized")
+	}
+
+	query := `
+	SELECT 
+		date(started_at) as day, 
+		SUM(duration_seconds) as duration 
+	FROM sessions 
+	WHERE started_at >= datetime('now', ?)
+	  AND NOT (
+	    source NOT IN ('browser_extension', 'http_listener')
+	    AND (url IS NULL OR url = '')
+	    AND app_id IN ('google-chrome','brave-browser','firefox','msedge','safari','opera','browser')
+	  )
+	  AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
+	GROUP BY day
+	ORDER BY day ASC
+	`
+
+	timeModifier := fmt.Sprintf("-%d days", days)
+	rows, err := s.db.QueryContext(ctx, query, timeModifier)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query global trend stats: %w", err)
+	}
+	defer rows.Close()
+
+	statMap := make(map[string]int64)
+	for rows.Next() {
+		var label string
+		var duration int64
+		if err := rows.Scan(&label, &duration); err != nil {
+			return nil, fmt.Errorf("failed to scan trend stat row: %w", err)
+		}
+		statMap[label] = duration
+	}
+
+	var stats []AppUsageStat
+	for i := days - 1; i >= 0; i-- {
+		dateStr := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		stats = append(stats, AppUsageStat{
+			Label:           dateStr,
+			DurationSeconds: statMap[dateStr],
+		})
 	}
 
 	return stats, nil

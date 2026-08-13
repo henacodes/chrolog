@@ -82,6 +82,14 @@ func (a *App) GetCategoryStats(timeframe string) ([]storage.AppStatRecord, error
 	return a.engine.GetCategoryStats(a.ctx, timeframe)
 }
 
+// GetGlobalTrendStats returns total duration stats grouped by day for the last X days.
+func (a *App) GetGlobalTrendStats(days int) ([]storage.AppUsageStat, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetGlobalTrendStats(a.ctx, days)
+}
+
 // ToggleTracking toggles tracking on/off and returns whether tracking is currently active.
 func (a *App) ToggleTracking() (bool, error) {
 	if a.engine == nil {

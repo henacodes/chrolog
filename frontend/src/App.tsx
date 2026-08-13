@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react"
-import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow } from "lucide-react"
+import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow, LineChart as LineChartIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { AppDetails } from "@/components/AppDetails"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { format, parseISO } from "date-fns"
 import "./style.css"
+
+const COLORS = [
+  '#558B2F', // Primary Green
+  '#0d9488', // Teal
+  '#d97706', // Amber
+  '#475569', // Slate
+  '#94a3b8', // Light Slate
+];
 
 const LanguageIcon = ({ language }: { language: string }) => {
   const [error, setError] = useState(false);
@@ -54,6 +64,12 @@ interface AppStatRecord {
   percentage: number
 }
 
+interface AppUsageStat {
+  label: string
+  duration_seconds: number
+  url?: string
+}
+
 interface AdapterStatusInfo {
   id: string
   active: boolean
@@ -71,6 +87,7 @@ export default function App() {
   const [timeframe, setTimeframe] = useState<string>("today")
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
   const [refreshKey, setRefreshKey] = useState<number>(0)
+  const [trendStats, setTrendStats] = useState<AppUsageStat[]>([])
 
   // App Details state
   const [activeAppId, setActiveAppId] = useState<string | null>(null)
@@ -87,6 +104,9 @@ export default function App() {
 
         const stats = await wails.GetCategoryStats(timeframe)
         setAppStats(stats || [])
+
+        const trend = await wails.GetGlobalTrendStats(7)
+        setTrendStats(trend || [])
 
         const statusList = await wails.GetAdapterStatus()
         setAdapters(statusList || [])
@@ -118,6 +138,15 @@ export default function App() {
       { app_id: "code", app_name: "Visual Studio Code", total_duration_seconds: 3600, percentage: 44.4 },
       { app_id: "firefox", app_name: "firefox", total_duration_seconds: 2700, percentage: 33.3 },
       { app_id: "ghostty", app_name: "ghostty", total_duration_seconds: 1800, percentage: 22.3 },
+    ])
+    setTrendStats([
+      { label: new Date(Date.now() - 6*86400000).toISOString(), duration_seconds: 14400 },
+      { label: new Date(Date.now() - 5*86400000).toISOString(), duration_seconds: 18000 },
+      { label: new Date(Date.now() - 4*86400000).toISOString(), duration_seconds: 10800 },
+      { label: new Date(Date.now() - 3*86400000).toISOString(), duration_seconds: 21600 },
+      { label: new Date(Date.now() - 2*86400000).toISOString(), duration_seconds: 15300 },
+      { label: new Date(Date.now() - 1*86400000).toISOString(), duration_seconds: 9000 },
+      { label: new Date().toISOString(), duration_seconds: 12600 },
     ])
     setAdapters([
       { id: "hyprland", active: true },
@@ -498,6 +527,97 @@ export default function App() {
                 )}
               </CardContent>
             </Card>
+            {/* Global Analytics Card */}
+            <Card className="border border-border bg-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                  <LineChartIcon className="h-5 w-5 text-primary dark:text-primary" />
+                  Usage Trend
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+                  {/* Area Chart: 7-Day Trend */}
+                  <div className="lg:col-span-2 h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendStats} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#558B2F" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#558B2F" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
+                        <XAxis 
+                          dataKey="label" 
+                          tickFormatter={(val) => {
+                            try { return format(parseISO(val), 'MMM d') }
+                            catch { return val }
+                          }}
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fill: '#64748b' }} 
+                          dy={10}
+                        />
+                        <RechartsTooltip 
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
+                          labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
+                          formatter={(value: any) => [formatDuration(Number(value)), "Tracked"]}
+                          labelFormatter={(label) => {
+                            try { return format(parseISO(label as string), 'EEEE, MMMM d') }
+                            catch { return label }
+                          }}
+                        />
+                        <Area type="monotone" dataKey="duration_seconds" stroke="#558B2F" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  {/* Donut Chart: App Composition */}
+                  <div className="h-[220px] flex flex-col items-center justify-center relative">
+                    {appStats.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={appStats.slice(0, 5)}
+                            cx="50%"
+                            cy="45%"
+                            innerRadius={50}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="total_duration_seconds"
+                            nameKey="app_name"
+                            stroke="none"
+                          >
+                            {appStats.slice(0, 5).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip 
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px' }}
+                            itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', fontSize: '12px' }}
+                            formatter={(value: any, name: any) => [formatDuration(Number(value)), name]}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={30} 
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', color: 'hsl(var(--muted-foreground))' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="text-sm text-slate-500 font-medium">No data</div>
+                    )}
+                    <div className="absolute inset-0 top-[-5%] flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Top Apps</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         )}
       </div>

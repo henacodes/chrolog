@@ -46,6 +46,10 @@ export function GetDocumentSessions(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetDocumentSessions'](arg1, arg2, arg3);
 }
 
+export function GetGlobalTrendStats(arg1) {
+  return window['go']['main']['App']['GetGlobalTrendStats'](arg1);
+}
+
 export function GetRecentSessions(arg1) {
   return window['go']['main']['App']['GetRecentSessions'](arg1);
 }

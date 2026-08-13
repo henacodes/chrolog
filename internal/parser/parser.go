@@ -1,8 +1,11 @@
 package parser
 
 import (
+	"regexp"
 	"strings"
 )
+
+var notificationRegex = regexp.MustCompile(`^\(\d+\)\s*`)
 
 // extractLanguage attempts to guess the programming language from a file extension.
 func extractLanguage(filename string) string {
@@ -51,8 +54,12 @@ func extractLanguage(filename string) string {
 // ExtractContext attempts to extract contextual data (e.g., document, project)
 // from a raw window title, based on common application patterns.
 func ExtractContext(appName, windowTitle string) map[string]string {
-	app := strings.ToLower(appName)
 	ctx := make(map[string]string)
+	
+	// Strip notification badges from window titles (e.g. "(5) YouTube" -> "YouTube")
+	windowTitle = notificationRegex.ReplaceAllString(windowTitle, "")
+
+	app := strings.ToLower(appName)
 
 	// VS Code
 	if strings.Contains(app, "code") {

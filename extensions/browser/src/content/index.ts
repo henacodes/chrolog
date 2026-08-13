@@ -25,7 +25,23 @@ function extractPageMetadata() {
     metadata['category'] = 'video';
     
     const videoId = new URLSearchParams(window.location.search).get('v');
-    const channelName = document.querySelector('link[itemprop="name"]')?.getAttribute('content');
+    
+    let channelName = null;
+    const channelSelectors = [
+      'ytd-video-owner-renderer ytd-channel-name a',
+      '#owner-name a',
+      'ytd-channel-name .yt-simple-endpoint'
+    ];
+    for (const sel of channelSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent) {
+        channelName = el.textContent.trim();
+        break;
+      }
+    }
+    if (!channelName) {
+      channelName = document.querySelector('link[itemprop="name"]')?.getAttribute('content') || null;
+    }
     const video = document.querySelector('video');
     
     // Stringify the nested object because Go expects map[string]string
@@ -57,6 +73,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Setup live event listeners for YouTube play/pause events
 let youtubeVideoElement: HTMLVideoElement | null = null;
+let currentChannelName: string | null = null;
+
 function setupYouTubeListeners() {
   if (!window.location.hostname.includes('youtube.com')) return;
 
@@ -71,6 +89,14 @@ function setupYouTubeListeners() {
     
     video.addEventListener('play', triggerUpdate);
     video.addEventListener('pause', triggerUpdate);
+  }
+
+  // Also check if channel name updated (SPA navigation)
+  const channelNameEl = document.querySelector('ytd-video-owner-renderer ytd-channel-name a, #owner-name a, ytd-channel-name .yt-simple-endpoint');
+  const newChannel = channelNameEl ? channelNameEl.textContent?.trim() : null;
+  if (newChannel && newChannel !== currentChannelName) {
+      currentChannelName = newChannel;
+      chrome.runtime.sendMessage({ type: 'FORCE_TRACKING_UPDATE' }).catch(() => {});
   }
 }
 

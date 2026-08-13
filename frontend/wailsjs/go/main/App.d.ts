@@ -25,6 +25,8 @@ export function GetCurrentSession():Promise<storage.SessionRecord>;
 
 export function GetDocumentSessions(arg1:string,arg2:string,arg3:string):Promise<Array<storage.SessionRecord>>;
 
+export function GetGlobalTrendStats(arg1:number):Promise<Array<storage.AppUsageStat>>;
+
 export function GetRecentSessions(arg1:number):Promise<Array<storage.SessionRecord>>;
 
 export function IsPaused():Promise<boolean>;
