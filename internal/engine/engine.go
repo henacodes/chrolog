@@ -138,7 +138,7 @@ func (e *Engine) processEvents(ctx context.Context) {
 
 func getPriority(source string) int {
 	switch source {
-	case "http_listener", "browser_extension":
+	case "http_listener", "browser_extension", "vscode_extension":
 		return 20 // High priority plugins
 	default:
 		return 10 // Base OS trackers
@@ -285,7 +285,10 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 
 	for k, v := range ctxData {
 		if v != "" && v != targetEvent.WindowTitle {
-			meta[k] = v
+			// Don't overwrite authoritative metadata from the browser extension
+			if _, exists := meta[k]; !exists {
+				meta[k] = v
+			}
 		}
 	}
 
@@ -431,9 +434,16 @@ func (e *Engine) GetActiveSessionHours(ctx context.Context, appID string, date s
 
 func (e *Engine) GetAppSessionsByTime(ctx context.Context, appID string, date string, hour int) ([]storage.SessionRecord, error) {
 	if e.storage == nil {
-		return nil, fmt.Errorf("storage is not configured")
+		return nil, fmt.Errorf("storage not initialized")
 	}
 	return e.storage.GetAppSessionsByTime(ctx, appID, date, hour)
+}
+
+func (e *Engine) GetDocumentSessions(ctx context.Context, appID string, project string, document string) ([]storage.SessionRecord, error) {
+	if e.storage == nil {
+		return nil, fmt.Errorf("storage not initialized")
+	}
+	return e.storage.GetDocumentSessions(ctx, appID, project, document)
 }
 
 func (e *Engine) Stop() error {

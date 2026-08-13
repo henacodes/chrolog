@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ArrowLeft, BarChart3, LineChart, History, Activity, CalendarIcon, ChevronRight, ChevronDown } from "lucide-react"
+import { ArrowLeft, BarChart3, LineChart, History, Activity, CalendarIcon, ChevronRight, ChevronDown, AppWindow } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,8 +29,10 @@ import {
   Line
 } from "recharts"
 import { GithubHeatmap } from "./GithubHeatmap"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { DocumentTimeline } from "./DocumentTimeline"
 
-function getDocumentIcon(appId: string, label: string, url?: string, language?: string): string | null {
+function getDocumentIcon(appId: string, label: string, url?: string, language?: string, project?: string): string | null {
   // If the appId is a hostname (e.g. from our new browser extension), fetch its specific favicon
   if (appId.includes('.') && !appId.includes(' ')) {
     return `https://www.google.com/s2/favicons?domain=${appId}&sz=32`
@@ -47,24 +49,25 @@ function getDocumentIcon(appId: string, label: string, url?: string, language?: 
         // Invalid URL, fall back
       }
     } else {
-      // Heuristics for historical OS tracker data where URL is missing
-      const lower = label.toLowerCase()
-      let domain = ''
-      if (lower.includes('youtube')) domain = 'youtube.com'
-      else if (lower.includes('github')) domain = 'github.com'
-      else if (lower.includes('google search')) domain = 'google.com'
-      else if (lower.includes('gmail')) domain = 'mail.google.com'
-      else if (lower.includes('meet -')) domain = 'meet.google.com'
-      else if (lower.includes('gemini') || lower.includes('chatgpt')) domain = 'chat.openai.com' // Using chatgpt icon for AI chats as a fallback if not gemini
-      else if (lower.includes('stackoverflow') || lower.includes('stack overflow')) domain = 'stackoverflow.com'
-      else if (lower.includes('notion')) domain = 'notion.so'
-      else if (lower.includes('figma')) domain = 'figma.com'
-      else if (lower.includes('twitter') || lower.includes('x.com')) domain = 'x.com'
-      else if (lower.includes('reddit')) domain = 'reddit.com'
-      else if (lower.includes('localhost') || lower.includes('127.0.0.1')) domain = 'localhost'
-      
-      // Specifically for Gemini
-      if (lower.includes('gemini')) domain = 'gemini.google.com'
+      let domain = project || ''
+      if (!domain) {
+        const lower = label.toLowerCase()
+        if (lower.includes('youtube')) domain = 'youtube.com'
+        else if (lower.includes('github')) domain = 'github.com'
+        else if (lower.includes('google search')) domain = 'google.com'
+        else if (lower.includes('gmail')) domain = 'mail.google.com'
+        else if (lower.includes('meet -')) domain = 'meet.google.com'
+        else if (lower.includes('gemini') || lower.includes('chatgpt')) domain = 'chat.openai.com' // Using chatgpt icon for AI chats as a fallback if not gemini
+        else if (lower.includes('stackoverflow') || lower.includes('stack overflow')) domain = 'stackoverflow.com'
+        else if (lower.includes('notion')) domain = 'notion.so'
+        else if (lower.includes('figma')) domain = 'figma.com'
+        else if (lower.includes('twitter') || lower.includes('x.com')) domain = 'x.com'
+        else if (lower.includes('reddit')) domain = 'reddit.com'
+        else if (lower.includes('localhost') || lower.includes('127.0.0.1')) domain = 'localhost'
+        
+        // Specifically for Gemini
+        if (lower.includes('gemini')) domain = 'gemini.google.com'
+      }
 
       if (domain) {
         return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
@@ -76,7 +79,7 @@ function getDocumentIcon(appId: string, label: string, url?: string, language?: 
   }
 
   // If this is a code editor, return the language icon based on the file extension
-  const codeEditors = ['code', 'cursor', 'webstorm', 'intellij', 'goland', 'pycharm', 'zed']
+  const codeEditors = ['code', 'cursor', 'webstorm', 'intellij', 'goland', 'pycharm', 'zed', 'antigravity']
   if (codeEditors.some(editor => appId.toLowerCase().includes(editor))) {
     const l = label.toLowerCase()
     
@@ -140,7 +143,7 @@ interface SessionRecord {
 }
 
 // Custom Accordion UI for Content Breakdown
-function AccordionItem({ group, appId, maxDuration, formatDuration }: { group: any, appId: string, maxDuration: number, formatDuration: (s: number) => string }) {
+function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocument }: { group: any, appId: string, maxDuration: number, formatDuration: (s: number) => string, onSelectDocument: (doc: any) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   
   // Try to fetch icon for the project level
@@ -198,14 +201,16 @@ function AccordionItem({ group, appId, maxDuration, formatDuration }: { group: a
             const childWidthPercent = group.totalDuration > 0 ? (item.duration / group.totalDuration) * 100 : 0
             
             return (
-              <div key={idx} className="relative flex items-center justify-between p-2 pl-12 hover:bg-slate-100 dark:hover:bg-slate-800/30">
+              <div key={idx} 
+                   onClick={() => onSelectDocument({ project: group.project, document: item.label, label: item.label })}
+                   className="relative flex items-center justify-between p-2 pl-12 hover:bg-slate-100 dark:hover:bg-slate-800/30 cursor-pointer">
                 <div 
                   className="absolute left-0 top-0 bottom-0 bg-[#558B2F]/5 dark:bg-primary/5 z-[-1] transition-all duration-500 ease-out" 
                   style={{ width: `${childWidthPercent}%` }} 
                 />
                 <div className="flex items-center gap-2 truncate">
-                  {getDocumentIcon(appId, item.label) ? (
-                    <img src={getDocumentIcon(appId, item.label)!} className="w-3.5 h-3.5 object-contain" />
+                  {getDocumentIcon(appId, item.label, item.url, undefined, group.project) ? (
+                    <img src={getDocumentIcon(appId, item.label, item.url, undefined, group.project)!} className="w-3.5 h-3.5 object-contain" />
                   ) : (
                     <div className="w-3.5 h-3.5 flex items-center justify-center text-slate-400">
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -235,15 +240,11 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [timeframe, setTimeframe] = useState<string>("today") // today, week, month
   const [chartType, setChartType] = useState<"bar" | "line">("bar")
-  const [viewMode, setViewMode] = useState<"graphs" | "documents" | "sessions">("graphs")
+  const [viewMode, setViewMode] = useState<"graphs" | "documents">("graphs")
   const [documents, setDocuments] = useState<AppUsageStat[]>([])
   const [isLoading, setIsLoading] = useState(false)
-
-  // Session specific state
-  const [sessionDates, setSessionDates] = useState<string[]>([])
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [sessionHours, setSessionHours] = useState<number[]>([])
-  const [selectedHour, setSelectedHour] = useState<number | null>(null)
+  
+  const [activeDocument, setActiveDocument] = useState<{ project: string, document: string, label: string } | null>(null)
 
   // 1. Fetch Graphs Data
   useEffect(() => {
@@ -285,71 +286,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
     }
   }, [appId, timeframe, viewMode, refreshKey])
 
-  // 2. Fetch Session Dates
-  useEffect(() => {
-    if (viewMode === "sessions" && wails) {
-      const initSessions = async () => {
-        try {
-          const dates = await wails.GetActiveSessionDates(appId)
-          setSessionDates(dates || [])
-          if (dates && dates.length > 0) {
-            if (!selectedDate || !dates.includes(selectedDate)) {
-               setSelectedDate(dates[0])
-            }
-          } else {
-             setSessions([])
-             setSessionHours([])
-             setSelectedDate(null)
-             setSelectedHour(null)
-          }
-        } catch (e) {
-          console.error("Error fetching session dates:", e)
-        }
-      }
-      initSessions()
-    }
-  }, [viewMode, appId, refreshKey]) // Intentional: we only want this to run when mode/app/refresh changes
-
-  // 3. Fetch Session Hours when Date changes
-  useEffect(() => {
-    if (viewMode === "sessions" && selectedDate && wails) {
-      const fetchHours = async () => {
-        try {
-          const hours = await wails.GetActiveSessionHours(appId, selectedDate)
-          setSessionHours(hours || [])
-          if (hours && hours.length > 0) {
-             if (selectedHour === null || !hours.includes(selectedHour)) {
-               setSelectedHour(hours[0])
-             }
-          } else {
-            setSelectedHour(null)
-            setSessions([])
-          }
-        } catch (e) {
-          console.error("Error fetching session hours:", e)
-        }
-      }
-      fetchHours()
-    }
-  }, [selectedDate, viewMode, appId])
-
-  // 4. Fetch Sessions by time
-  useEffect(() => {
-    if (viewMode === "sessions" && selectedDate && selectedHour !== null && wails) {
-      const fetchSessions = async () => {
-        setIsLoading(true)
-        try {
-          const data = await wails.GetAppSessionsByTime(appId, selectedDate, selectedHour)
-          setSessions(data || [])
-        } catch (e) {
-          console.error("Error fetching sessions by time:", e)
-        } finally {
-          setIsLoading(false)
-        }
-      }
-      fetchSessions()
-    }
-  }, [selectedHour, selectedDate, viewMode, appId])
+  // (Session fetching removed)
 
   const formatDuration = (seconds: number) => {
     if (seconds <= 0) return "0s"
@@ -405,16 +342,6 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
             >
               <Activity className="h-4 w-4" /> Content
             </button>
-            <button
-              onClick={() => setViewMode("sessions")}
-              className={`px-3 py-1.5 rounded-none transition-all flex items-center gap-1.5 ${
-                viewMode === "sessions"
-                  ? "bg-card text-slate-900 dark:text-slate-100 shadow-none"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-              }`}
-            >
-              <History className="h-4 w-4" /> Sessions
-            </button>
           </div>
         </div>
       </div>
@@ -432,8 +359,8 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
             {appIcon && appIcon !== "NONE" ? (
               <img src={appIcon} alt={appName} className="w-14 h-14 rounded-none object-contain" />
             ) : (
-              <div className="w-14 h-14 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-500 uppercase">
-                {appName?.substring(0, 2) || appId.substring(0, 2)}
+              <div className="w-14 h-14 flex items-center justify-center text-slate-400 dark:text-slate-500">
+                <AppWindow className="w-12 h-12 stroke-1" />
               </div>
             )}
             <div>
@@ -530,7 +457,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
               )}
             </CardContent>
           </>
-        ) : viewMode === "documents" ? (
+        ) : (
           <>
             <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
               <div>
@@ -600,6 +527,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                         appId={appId} 
                         maxDuration={maxDuration} 
                         formatDuration={formatDuration} 
+                        onSelectDocument={setActiveDocument}
                       />
                     ))
                   })()}
@@ -609,174 +537,24 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
               )}
             </CardContent>
           </>
-        ) : (
-          <>
-            <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
-              <div>
-                <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100">Session History</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Detailed window focuses by hour</CardDescription>
-              </div>
-              
-              <div className="flex items-center gap-2 flex-wrap">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-[180px] justify-start text-left font-bold rounded-none border-slate-200 dark:border-slate-800 ${!selectedDate && "text-muted-foreground"}`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(parseISO(selectedDate), "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-none border-border" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate ? parseISO(selectedDate) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(format(date, 'yyyy-MM-dd'))
-                        }
-                      }}
-                      disabled={(date) => {
-                        const dateStr = format(date, 'yyyy-MM-dd')
-                        return !sessionDates.includes(dateStr)
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <Select
-                  value={selectedHour !== null ? selectedHour.toString() : ""}
-                  onValueChange={(val) => setSelectedHour(parseInt(val))}
-                  disabled={!selectedDate || sessionHours.length === 0}
-                >
-                  <SelectTrigger className="w-[100px] font-bold rounded-none border-slate-200 dark:border-slate-800">
-                    <SelectValue placeholder="Time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sessionHours.length === 0 && <SelectItem value="none" disabled>-</SelectItem>}
-                    {sessionHours.map(h => (
-                      <SelectItem key={h} value={h.toString()} className="font-bold">
-                        {h.toString().padStart(2, '0')}:00
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold animate-pulse">Loading sessions...</div>
-              ) : sessions.length > 0 ? (
-                <div className="w-full mt-4 space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {sessions.slice().reverse().map((session, idx) => {
-                    const durationStr = formatDuration(session.duration_seconds);
-                    const startTime = formatTime(session.started_at);
-                    const endTime = formatTime(session.ended_at);
-                    
-                    let isPlaying = false;
-                    let channelName = "";
-                    let videoId = "";
-                    let category = session.metadata?.category || "";
-                    let description = session.metadata?.description || "";
-                    let project = session.metadata?.project || "";
-                    let document = session.metadata?.document || "";
-                    let language = session.metadata?.language || "";
-                    
-                    if (session.metadata?.platform_specific) {
-                      try {
-                        const plat = JSON.parse(session.metadata.platform_specific);
-                        if (plat.youtube) {
-                          isPlaying = plat.youtube.is_playing;
-                          channelName = plat.youtube.channel_name || "";
-                          videoId = plat.youtube.video_id || "";
-                        }
-                      } catch(e) {}
-                    }
-                    
-                    return (
-                      <div key={idx} className="relative flex flex-col p-4 bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors">
-                        
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 min-w-0">
-                            
-                            {project && document ? (
-                              <div className="flex items-center gap-2 mb-1.5">
-                                {getDocumentIcon(session.app_id, document, undefined, language) ? (
-                                  <img src={getDocumentIcon(session.app_id, document, undefined, language)!} className="w-4 h-4 object-contain" />
-                                ) : (
-                                  <div className="w-4 h-4 flex items-center justify-center text-slate-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                  </div>
-                                )}
-                                <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-sm">
-                                  {project} <span className="text-slate-400 dark:text-slate-500 mx-1">/</span> <span className="font-mono text-primary dark:text-primary">{document}</span>
-                                </h4>
-                              </div>
-                            ) : (
-                              <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-sm">
-                                {session.window_title || "Untitled"}
-                              </h4>
-                            )}
-                            
-                            <div className="mt-1 flex flex-wrap items-center gap-2">
-                              {category && (
-                                <Badge variant="secondary" className="text-[10px] uppercase font-black px-1.5 py-0 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                  {category}
-                                </Badge>
-                              )}
-                              
-                              {videoId && (
-                                <Badge variant="outline" className={`text-[10px] font-bold px-1.5 py-0 rounded-none border ${isPlaying ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 text-slate-500'}`}>
-                                  {isPlaying ? '▶️ PLAYING' : '⏸️ PAUSED'} {channelName ? ` • ${channelName}` : ''}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {description && (
-                              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                                {description}
-                              </p>
-                            )}
-                          </div>
-                          
-                          <div className="flex flex-col items-end shrink-0">
-                            <span className="font-mono text-sm font-black text-[#558B2F] dark:text-primary">
-                              {durationStr}
-                            </span>
-                            <span className="font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400 mt-1">
-                              {startTime} - {endTime}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Thumbnail for YouTube */}
-                        {videoId && (
-                          <div className="mt-3 overflow-hidden border border-slate-200 dark:border-slate-800 relative w-fit">
-                            <img 
-                              src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
-                              alt="thumbnail" 
-                              className="h-24 object-cover grayscale-[0.2] hover:grayscale-0 transition-all"
-                            />
-                            {isPlaying && (
-                              <div className="absolute inset-0 bg-red-500/10 mix-blend-overlay pointer-events-none" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold">No session history found.</div>
-              )}
-            </CardContent>
-          </>
         )}
       </Card>
       
       {/* Github Heatmap */}
       <GithubHeatmap appId={appId} appName={appName} />
+
+      <Dialog open={!!activeDocument} onOpenChange={(open) => !open && setActiveDocument(null)}>
+        <DialogContent className="w-full max-w-[680px] max-h-[85vh] overflow-y-auto bg-card border border-border p-6 rounded-none shadow-2xl">
+          {activeDocument && (
+            <DocumentTimeline
+              appId={appId}
+              project={activeDocument.project}
+              document={activeDocument.document}
+              appIcon={getDocumentIcon(appId, activeDocument.label, undefined, undefined, activeDocument.project) || undefined}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

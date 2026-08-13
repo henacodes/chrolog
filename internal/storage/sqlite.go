@@ -71,6 +71,23 @@ func (s *SQLiteStorage) Init(ctx context.Context) error {
 	_, _ = db.ExecContext(ctx, `ALTER TABLE sessions ADD COLUMN url TEXT DEFAULT ''`)
 	_, _ = db.ExecContext(ctx, `ALTER TABLE raw_events ADD COLUMN url TEXT DEFAULT ''`)
 
+	// One-time migration: delete OS-only browser sessions superseded by a browser_extension session
+	// for the same window_title within a 20-second window. These are the historical duplicates.
+	_, _ = db.ExecContext(ctx, `
+		DELETE FROM sessions
+		WHERE source NOT IN ('browser_extension', 'http_listener')
+		  AND (url IS NULL OR url = '')
+		  AND app_id IN ('google-chrome','brave-browser','firefox','msedge','safari','opera','browser')
+		  AND EXISTS (
+		    SELECT 1 FROM sessions s2
+		    WHERE s2.app_id     = sessions.app_id
+		      AND s2.window_title = sessions.window_title
+		      AND s2.source     = 'browser_extension'
+		      AND s2.started_at >= datetime(sessions.started_at, '-20 seconds')
+		      AND s2.started_at <= datetime(sessions.started_at, '+20 seconds')
+		  )
+	`)
+
 	s.db = db
 	return nil
 }
@@ -85,6 +102,43 @@ func (s *SQLiteStorage) SaveSession(ctx context.Context, session SessionRecord) 
 
 	metaJSON, _ := json.Marshal(session.Metadata)
 
+	// If this is a browser_extension session with a URL, try to retroactively enrich any
+	// recent OS-only session for the same app+window_title (within a 20-second grace window).
+	// This resolves the race condition where the OS tracker fires before the extension.
+	if session.Source == "browser_extension" && session.URL != "" {
+		graceSince := session.StartedAt.Add(-20 * time.Second)
+		graceTo := session.StartedAt.Add(20 * time.Second)
+
+		updateQuery := `
+			UPDATE sessions
+			SET url = ?, source = ?, metadata_json = ?, ended_at = ?, duration_seconds = ?
+			WHERE app_id = ?
+			  AND window_title = ?
+			  AND source NOT IN ('browser_extension', 'http_listener')
+			  AND (url IS NULL OR url = '')
+			  AND started_at >= ?
+			  AND started_at <= ?
+		`
+		result, err := s.db.ExecContext(ctx, updateQuery,
+			session.URL,
+			session.Source,
+			string(metaJSON),
+			session.EndedAt.Format(time.RFC3339Nano),
+			session.DurationSeconds,
+			session.AppID,
+			session.WindowTitle,
+			graceSince.Format(time.RFC3339Nano),
+			graceTo.Format(time.RFC3339Nano),
+		)
+		if err == nil {
+			if n, _ := result.RowsAffected(); n > 0 {
+				// Successfully merged into existing session — skip insert.
+				return nil
+			}
+		}
+	}
+
+	// Normal insert for all other cases
 	query := `
 	INSERT INTO sessions (app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -256,6 +310,27 @@ func (s *SQLiteStorage) Close() error {
 	return nil
 }
 
+// UpdateSessionEnrichment patches an existing OS-only session row with URL, source and metadata
+// from the browser extension. Called when retroactive enrichment via SaveSession's grace window
+// is needed explicitly (e.g., for tests or direct API use).
+func (s *SQLiteStorage) UpdateSessionEnrichment(ctx context.Context, id int64, url string, source string, metadataJSON string, endedAt time.Time, durationSeconds int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return fmt.Errorf("storage database not initialized")
+	}
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE sessions SET url = ?, source = ?, metadata_json = ?, ended_at = ?, duration_seconds = ? WHERE id = ?`,
+		url, source, metadataJSON, endedAt.Format(time.RFC3339Nano), durationSeconds, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update session enrichment: %w", err)
+	}
+	return nil
+}
+
 // GetActiveSessionDates returns a list of distinct dates (YYYY-MM-DD) where the app was used.
 func (s *SQLiteStorage) GetActiveSessionDates(ctx context.Context, appID string) ([]string, error) {
 	s.mu.Lock()
@@ -328,6 +403,69 @@ func (s *SQLiteStorage) GetAppSessionsByTime(ctx context.Context, appID string, 
 	}
 	
 	query += ` ORDER BY started_at DESC`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []SessionRecord
+	for rows.Next() {
+		var rec SessionRecord
+		var startedAtStr, endedAtStr, metaJSON string
+		if err := rows.Scan(
+			&rec.ID, &rec.AppID, &rec.AppName, &rec.WindowTitle, &rec.Source, &rec.URL,
+			&startedAtStr, &endedAtStr, &rec.DurationSeconds, &metaJSON,
+		); err != nil {
+			return nil, err
+		}
+		if t, err := time.Parse(time.RFC3339Nano, startedAtStr); err == nil {
+			rec.StartedAt = t
+		}
+		if t, err := time.Parse(time.RFC3339Nano, endedAtStr); err == nil {
+			rec.EndedAt = t
+		}
+		if metaJSON != "" {
+			_ = json.Unmarshal([]byte(metaJSON), &rec.Metadata)
+		}
+		records = append(records, rec)
+	}
+	return records, nil
+}
+
+func (s *SQLiteStorage) GetDocumentSessions(ctx context.Context, appID string, project string, document string) ([]SessionRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	var query string
+	var args []interface{}
+	
+	if project != "" {
+		query = `
+			SELECT id, app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json 
+			FROM sessions 
+			WHERE app_id = ? AND json_extract(metadata_json, '$.project') = ? AND (
+				json_extract(metadata_json, '$.document') = ? OR 
+				(json_extract(metadata_json, '$.document') IS NULL AND window_title = ?)
+			)
+			AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
+			ORDER BY started_at ASC
+		`
+		args = []interface{}{appID, project, document, document}
+	} else {
+		query = `
+			SELECT id, app_id, app_name, window_title, source, url, started_at, ended_at, duration_seconds, metadata_json 
+			FROM sessions 
+			WHERE app_id = ? AND json_extract(metadata_json, '$.project') IS NULL AND (
+				json_extract(metadata_json, '$.document') = ? OR 
+				(json_extract(metadata_json, '$.document') IS NULL AND window_title = ?)
+			)
+			AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
+			ORDER BY started_at ASC
+		`
+		args = []interface{}{appID, document, document}
+	}
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -520,22 +658,28 @@ func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, t
 		since = now.Add(-24 * time.Hour)
 	}
 
-	// SQLite json_extract extracts the fields from the metadata JSON object.
-	// If project is present, format as "project / document". Otherwise, just "document".
-	// Since metadata_json might be null or not have "document", we filter where it's not null.
+	// Build query. For known browser app_ids, exclude sessions where the OS tracker
+	// recorded a plain window-focus with no URL (unenriched OS duplicates).
+	// These are identified by: source not being a high-priority enriched source AND url being empty.
 	query := `
-	SELECT 
-	  CASE 
-	    WHEN json_extract(metadata_json, '$.project') IS NOT NULL 
+	SELECT
+	  CASE
+	    WHEN json_extract(metadata_json, '$.project') IS NOT NULL
 	    THEN json_extract(metadata_json, '$.project') || ' / ' || COALESCE(json_extract(metadata_json, '$.document'), window_title)
 	    WHEN json_extract(metadata_json, '$.document') IS NOT NULL
 	    THEN json_extract(metadata_json, '$.document')
 	    ELSE window_title
-	  END as doc, 
+	  END as doc,
 	  SUM(duration_seconds) as duration,
 	  MAX(url) as url
 	FROM sessions
 	WHERE app_id = ? AND started_at >= ?
+	  AND NOT (
+	    source NOT IN ('browser_extension', 'http_listener')
+	    AND (url IS NULL OR url = '')
+	    AND app_id IN ('google-chrome','brave-browser','firefox','msedge','safari','opera','browser')
+	  )
+	  AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
 	GROUP BY doc
 	HAVING duration >= 5
 	ORDER BY duration DESC

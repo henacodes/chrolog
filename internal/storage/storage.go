@@ -48,5 +48,8 @@ type Storage interface {
 	GetActiveSessionDates(ctx context.Context, appID string) ([]string, error)
 	GetActiveSessionHours(ctx context.Context, appID string, date string) ([]int, error)
 	GetAppSessionsByTime(ctx context.Context, appID string, date string, hour int) ([]SessionRecord, error)
+	GetDocumentSessions(ctx context.Context, appID string, project string, document string) ([]SessionRecord, error)
+	// UpdateSessionEnrichment patches an existing OS-only session with URL and metadata from the browser extension.
+	UpdateSessionEnrichment(ctx context.Context, id int64, url string, source string, metadataJSON string, endedAt time.Time, durationSeconds int64) error
 	Close() error
 }

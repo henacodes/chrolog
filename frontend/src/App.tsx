@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap } from "lucide-react"
+import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -472,8 +472,8 @@ export default function App() {
                             {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
                               <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-none object-contain" />
                             ) : (
-                              <div className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase">
-                                {stat.app_name?.substring(0, 2) || stat.app_id.substring(0, 2)}
+                              <div className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                <AppWindow className="w-4 h-4" />
                               </div>
                             )}
                             <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">

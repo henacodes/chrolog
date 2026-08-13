@@ -135,6 +135,13 @@ func (a *App) GetAppSessionsByTime(appID string, date string, hour int) ([]stora
 	return a.engine.GetAppSessionsByTime(a.ctx, appID, date, hour)
 }
 
+func (a *App) GetDocumentSessions(appID string, project string, document string) ([]storage.SessionRecord, error) {
+	if a.engine == nil {
+		return nil, fmt.Errorf("engine not initialized")
+	}
+	return a.engine.GetDocumentSessions(a.ctx, appID, project, document)
+}
+
 func (a *App) GetAppDocumentStats(appID string, timeframe string) ([]storage.AppUsageStat, error) {
 	if a.engine == nil {
 		return nil, fmt.Errorf("engine not initialized")

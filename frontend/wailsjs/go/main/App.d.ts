@@ -23,6 +23,8 @@ export function GetCategoryStats(arg1:string):Promise<Array<storage.AppStatRecor
 
 export function GetCurrentSession():Promise<storage.SessionRecord>;
 
+export function GetDocumentSessions(arg1:string,arg2:string,arg3:string):Promise<Array<storage.SessionRecord>>;
+
 export function GetRecentSessions(arg1:number):Promise<Array<storage.SessionRecord>>;
 
 export function IsPaused():Promise<boolean>;

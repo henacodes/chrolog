@@ -42,6 +42,10 @@ export function GetCurrentSession() {
   return window['go']['main']['App']['GetCurrentSession']();
 }
 
+export function GetDocumentSessions(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetDocumentSessions'](arg1, arg2, arg3);
+}
+
 export function GetRecentSessions(arg1) {
   return window['go']['main']['App']['GetRecentSessions'](arg1);
 }
