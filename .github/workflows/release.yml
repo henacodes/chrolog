@@ -54,3 +54,36 @@ jobs:
         with:
           files: build/bin/${{ matrix.artifact-name }}
           generate_release_notes: true
+
+  build-extensions:
+    name: Build Extensions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Browser Extension
+        run: |
+          cd extensions/browser
+          npm install
+          npm run build
+          cd dist
+          zip -r ../../../chrolog-browser-extension.zip .
+
+      - name: Build VS Code Extension
+        run: |
+          cd extensions/vscode
+          npm install
+          npx @vscode/vsce package --no-dependencies -o ../../chrolog-vscode.vsix
+
+      - name: Publish Extensions to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            chrolog-browser-extension.zip
+            chrolog-vscode.vsix
