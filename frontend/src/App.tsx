@@ -330,72 +330,90 @@ export default function App() {
                   
                   {/* Metadata Rich UI */}
                   {currentSession?.metadata && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {currentSession.metadata.category && (
-                        <Badge variant="secondary" className="text-xs uppercase font-black px-2 py-1 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {currentSession.metadata.category}
-                        </Badge>
-                      )}
+                    <div className="flex flex-col gap-3 pt-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {currentSession.metadata.category && (
+                          <Badge variant="secondary" className="text-xs uppercase font-black px-2 py-1 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {currentSession.metadata.category}
+                          </Badge>
+                        )}
 
-                      {/* IDE-style: project / document */}
-                      {currentSession.metadata.project && currentSession.metadata.document && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-none shadow-sm">
-                          {currentSession.metadata.language && (
-                            <LanguageIcon language={currentSession.metadata.language} />
-                          )}
-                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {currentSession.metadata.project}
-                            <span className="text-slate-400 dark:text-slate-500 mx-1.5">/</span>
-                            <span className="font-mono text-primary dark:text-primary">{currentSession.metadata.document}</span>
-                          </span>
-                        </div>
-                      )}
+                        {/* IDE-style: project / document */}
+                        {currentSession.metadata.project && currentSession.metadata.document && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-none shadow-sm">
+                            {currentSession.metadata.language && (
+                              <LanguageIcon language={currentSession.metadata.language} />
+                            )}
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {currentSession.metadata.project}
+                              <span className="text-slate-400 dark:text-slate-500 mx-1.5">/</span>
+                              <span className="font-mono text-primary dark:text-primary">{currentSession.metadata.document}</span>
+                            </span>
+                          </div>
+                        )}
 
-                      {/* Browser-style: domain badge + page title (shown when parser finds project but no doc) */}
-                      {currentSession.metadata.project && !currentSession.metadata.document && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 rounded-none shadow-sm max-w-md">
-                          <Globe className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 shrink-0">
-                            {currentSession.metadata.project}
-                          </span>
-                          {currentSession.window_title && (
-                            <>
-                              <span className="text-blue-300 dark:text-blue-700 shrink-0">·</span>
-                              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
-                                {currentSession.window_title.replace(/\s*-\s*[^-]+$/,'').replace(/\s*-\s*[^-]+$/,'').trim() || currentSession.window_title}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      
-                      {(() => {
-                        if (!currentSession.metadata.platform_specific) return null;
-                        try {
-                          const platform = JSON.parse(currentSession.metadata.platform_specific);
-                          if (platform.youtube) {
-                            const yt = platform.youtube;
-                            const formatTime = (secs: number) => {
-                              const m = Math.floor(secs / 60);
-                              const s = secs % 60;
-                              return `${m}:${s.toString().padStart(2, '0')}`;
-                            };
-                            return (
-                              <Badge variant="outline" className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
-                                {yt.is_playing
-                                  ? <PlayCircle className="h-3 w-3" />
-                                  : <PauseCircle className="h-3 w-3" />}
-                                <span>{yt.is_playing ? 'PLAYING' : 'PAUSED'}</span>
-                                {yt.current_time_seconds > 0 && <span>• {formatTime(yt.current_time_seconds)}</span>}
-                                {yt.channel_name && <span>• {yt.channel_name}</span>}
-                              </Badge>
-                            );
+                        {/* Browser-style: domain badge + page title (shown when parser finds project but no doc) */}
+                        {currentSession.metadata.project && !currentSession.metadata.document && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 rounded-none shadow-sm max-w-md">
+                            <Globe className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 shrink-0">
+                              {currentSession.metadata.project}
+                            </span>
+                            {currentSession.window_title && (
+                              <>
+                                <span className="text-blue-300 dark:text-blue-700 shrink-0">·</span>
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+                                  {currentSession.window_title.replace(/\s*-\s*[^-]+$/,'').replace(/\s*-\s*[^-]+$/,'').trim() || currentSession.window_title}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {(() => {
+                          if (!currentSession.metadata.platform_specific) return null;
+                          try {
+                            const platform = JSON.parse(currentSession.metadata.platform_specific);
+                            if (platform.youtube) {
+                              const yt = platform.youtube;
+                              const formatTime = (secs: number) => {
+                                const m = Math.floor(secs / 60);
+                                const s = secs % 60;
+                                return `${m}:${s.toString().padStart(2, '0')}`;
+                              };
+                              return (
+                                <Badge variant="outline" className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                                  {yt.is_playing
+                                    ? <PlayCircle className="h-3 w-3" />
+                                    : <PauseCircle className="h-3 w-3" />}
+                                  <span>{yt.is_playing ? 'PLAYING' : 'PAUSED'}</span>
+                                  {yt.current_time_seconds > 0 && <span>• {formatTime(yt.current_time_seconds)}</span>}
+                                  {yt.channel_name && <span>• {yt.channel_name}</span>}
+                                </Badge>
+                              );
+                            }
+                          } catch (e) {
+                            return null;
                           }
-                        } catch (e) {
                           return null;
-                        }
-                        return null;
-                      })()}
+                        })()}
+                      </div>
+                      
+                      {/* Description and Site info */}
+                      {(currentSession.metadata.site_name || currentSession.metadata.description) && (
+                        <div className="text-sm text-slate-600 dark:text-slate-400 border-l-2 border-primary/40 pl-4 py-1 mt-2">
+                          {currentSession.metadata.site_name && (
+                            <div className="font-bold text-slate-800 dark:text-slate-200 mb-1 tracking-tight">
+                              {currentSession.metadata.site_name}
+                            </div>
+                          )}
+                          {currentSession.metadata.description && (
+                            <div className="line-clamp-2 leading-relaxed opacity-90 text-[13px]">
+                              {currentSession.metadata.description}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -93,7 +93,7 @@ export function DocumentTimeline({ appId, project, document, appIcon }: Document
   let isPlaying = false
   let channelName = ''
   let videoId = ''
-  const ytSession = [...daySessions].reverse().find(s => s.metadata?.platform_specific)
+  const ytSession = [...daySessions].reverse().find(s => s.metadata?.platform_specific || (s as any).url)
   if (ytSession?.metadata?.platform_specific) {
     try {
       const plat = JSON.parse(ytSession.metadata.platform_specific)
@@ -103,6 +103,25 @@ export function DocumentTimeline({ appId, project, document, appIcon }: Document
         videoId = plat.youtube.video_id || ''
       }
     } catch { /* ignore */ }
+  }
+
+  // Fallback: extract videoId from session URL if not found in platform_specific metadata
+  if (!videoId) {
+    for (const s of [...daySessions].reverse()) {
+      const uStr = (s as any).url || (s.metadata && s.metadata.url)
+      if (uStr) {
+        try {
+          const u = new URL(uStr)
+          if (u.hostname.includes('youtube.com')) {
+            const v = u.searchParams.get('v')
+            if (v) {
+              videoId = v
+              break
+            }
+          }
+        } catch {}
+      }
+    }
   }
 
   if (isLoading) {

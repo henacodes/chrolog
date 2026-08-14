@@ -9,13 +9,13 @@ function App() {
 
   useEffect(() => {
     // Query background script on load
-    chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
+    chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((response: any) => {
       if (response) {
-        setAppId(response.appId)
-        setWindowTitle(response.windowTitle)
-        setStartTime(response.startTime)
+        if (response.appId) setAppId(response.appId)
+        if (response.windowTitle) setWindowTitle(response.windowTitle)
+        if (response.startTime) setStartTime(response.startTime)
       }
-    })
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -36,6 +36,20 @@ function App() {
     return `${h}:${m}:${s}`
   }
 
+  const cleanTitle = (title: string) => {
+    if (!title) return ''
+    let cleaned = title.replace(/^\(\d+\)\s*/, '')
+    if (cleaned.includes(' - ')) {
+      const parts = cleaned.split(' - ')
+      if (parts.length > 1) {
+        cleaned = parts.slice(0, parts.length - 1).join(' - ')
+      }
+    }
+    return cleaned
+  }
+
+  const displayTitle = cleanTitle(windowTitle) || appId
+
   return (
     <div className="popup-container">
       <header className="popup-header">
@@ -55,11 +69,16 @@ function App() {
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
         </div>
-        <h2 style={{ fontSize: '1rem', marginBottom: '0.25rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Focus</h2>
-        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {appId || 'No active page'}
+        <h2 style={{ fontSize: '0.85rem', marginBottom: '0.25rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Focus</h2>
+        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayTitle}>
+          {displayTitle || 'No active page'}
         </div>
-        <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#558B2F', fontFamily: 'monospace', letterSpacing: '2px', textShadow: '0 0 10px rgba(85, 139, 47, 0.3)' }}>
+        {appId && displayTitle !== appId && (
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {appId}
+          </div>
+        )}
+        <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#558B2F', fontFamily: 'monospace', letterSpacing: '2px', textShadow: '0 0 10px rgba(85, 139, 47, 0.3)', marginTop: '0.5rem' }}>
           {formatTime(elapsedSeconds)}
         </div>
       </main>

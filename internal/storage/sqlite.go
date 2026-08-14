@@ -449,7 +449,6 @@ func (s *SQLiteStorage) GetDocumentSessions(ctx context.Context, appID string, p
 				json_extract(metadata_json, '$.document') = ? OR 
 				(json_extract(metadata_json, '$.document') IS NULL AND window_title = ?)
 			)
-			AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
 			ORDER BY started_at ASC
 		`
 		args = []interface{}{appID, project, document, document}
@@ -461,7 +460,6 @@ func (s *SQLiteStorage) GetDocumentSessions(ctx context.Context, appID string, p
 				json_extract(metadata_json, '$.document') = ? OR 
 				(json_extract(metadata_json, '$.document') IS NULL AND window_title = ?)
 			)
-			AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
 			ORDER BY started_at ASC
 		`
 		args = []interface{}{appID, document, document}
@@ -709,7 +707,6 @@ func (s *SQLiteStorage) GetAppDocumentStats(ctx context.Context, appID string, t
 	    AND (url IS NULL OR url = '')
 	    AND app_id IN ('google-chrome','brave-browser','firefox','msedge','safari','opera','browser')
 	  )
-	  AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
 	GROUP BY doc
 	HAVING duration >= 5
 	ORDER BY duration DESC
@@ -753,7 +750,6 @@ func (s *SQLiteStorage) GetGlobalTrendStats(ctx context.Context, days int) ([]Ap
 	    AND (url IS NULL OR url = '')
 	    AND app_id IN ('google-chrome','brave-browser','firefox','msedge','safari','opera','browser')
 	  )
-	  AND COALESCE(json_extract(metadata_json, '$.platform_specific'), '') NOT LIKE '%"is_playing":false%'
 	GROUP BY day
 	ORDER BY day ASC
 	`

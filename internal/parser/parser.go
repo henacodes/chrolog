@@ -126,49 +126,63 @@ func ExtractContext(appName, windowTitle string) map[string]string {
 	browsers := []string{"chrome", "firefox", "brave", "edge", "safari", "opera", "browser"}
 	for _, b := range browsers {
 		if strings.Contains(app, b) {
-			// Usually: "Tab Title - Site Name - Google Chrome"
-			parts := strings.Split(windowTitle, " - ")
-			if len(parts) > 1 {
-				var siteName string
-				if len(parts) > 2 {
-					siteName = strings.TrimSpace(parts[len(parts)-2])
-					ctx["document"] = strings.Join(parts[:len(parts)-2], " - ")
-				} else {
-					siteName = strings.TrimSpace(parts[1])
-					ctx["document"] = strings.TrimSpace(parts[0])
+			// Window titles are often "Tab Title - Site Name - Google Chrome" or "Tab Title - Google Chrome"
+			// Or just "Tab Title" if it's from the browser extension.
+			
+			// 1. Strip the browser name suffix if it exists
+			cleanedTitle := windowTitle
+			suffixes := []string{" - Google Chrome", " - Mozilla Firefox", " - Brave", " - Microsoft Edge", " - Safari", " - Opera"}
+			for _, suffix := range suffixes {
+				if strings.HasSuffix(cleanedTitle, suffix) {
+					cleanedTitle = strings.TrimSuffix(cleanedTitle, suffix)
+					break
 				}
-
-				lowerSite := strings.ToLower(siteName)
-				domain := ""
-				if strings.Contains(lowerSite, "youtube") {
-					domain = "www.youtube.com"
-				} else if strings.Contains(lowerSite, "github") {
-					domain = "github.com"
-				} else if strings.Contains(lowerSite, "google search") {
-					domain = "google.com"
-				} else if strings.Contains(lowerSite, "gmail") {
-					domain = "mail.google.com"
-				} else if strings.Contains(lowerSite, "gemini") {
-					domain = "gemini.google.com"
-				} else if strings.Contains(lowerSite, "chatgpt") {
-					domain = "chat.openai.com"
-				} else if strings.Contains(lowerSite, "stackoverflow") || strings.Contains(lowerSite, "stack overflow") {
-					domain = "stackoverflow.com"
-				} else if strings.Contains(lowerSite, "notion") {
-					domain = "notion.so"
-				} else if strings.Contains(lowerSite, "figma") {
-					domain = "figma.com"
-				} else if strings.Contains(lowerSite, "x.com") || strings.Contains(lowerSite, "twitter") {
-					domain = "x.com"
-				} else if strings.Contains(lowerSite, "reddit") {
-					domain = "reddit.com"
-				} else {
-					domain = siteName
-				}
-
-				ctx["project"] = domain
-				return ctx
 			}
+
+			// 2. We don't want to aggressively split by " - " and discard data.
+			// Just use the cleaned title as the document.
+			ctx["document"] = cleanedTitle
+
+			// 3. For the project/domain, if we don't have it from the extension, we can try to extract it
+			// by looking at the last part of the title (often the site name).
+			parts := strings.Split(cleanedTitle, " - ")
+			var siteName string
+			if len(parts) > 1 {
+				siteName = strings.TrimSpace(parts[len(parts)-1])
+			} else {
+				siteName = strings.TrimSpace(parts[0])
+			}
+
+			lowerSite := strings.ToLower(siteName)
+			domain := ""
+			if strings.Contains(lowerSite, "youtube") {
+				domain = "www.youtube.com"
+			} else if strings.Contains(lowerSite, "github") {
+				domain = "github.com"
+			} else if strings.Contains(lowerSite, "google search") {
+				domain = "google.com"
+			} else if strings.Contains(lowerSite, "gmail") {
+				domain = "mail.google.com"
+			} else if strings.Contains(lowerSite, "gemini") {
+				domain = "gemini.google.com"
+			} else if strings.Contains(lowerSite, "chatgpt") {
+				domain = "chat.openai.com"
+			} else if strings.Contains(lowerSite, "stackoverflow") || strings.Contains(lowerSite, "stack overflow") {
+				domain = "stackoverflow.com"
+			} else if strings.Contains(lowerSite, "notion") {
+				domain = "notion.so"
+			} else if strings.Contains(lowerSite, "figma") {
+				domain = "figma.com"
+			} else if strings.Contains(lowerSite, "x.com") || strings.Contains(lowerSite, "twitter") {
+				domain = "x.com"
+			} else if strings.Contains(lowerSite, "reddit") {
+				domain = "reddit.com"
+			} else {
+				domain = siteName
+			}
+
+			ctx["project"] = domain
+			return ctx
 		}
 	}
 
