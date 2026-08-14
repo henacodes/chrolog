@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow, LineChart as LineChartIcon } from "lucide-react"
+import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow, LineChart as LineChartIcon, Globe, PlayCircle, PauseCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -336,7 +336,8 @@ export default function App() {
                           {currentSession.metadata.category}
                         </Badge>
                       )}
-                      
+
+                      {/* IDE-style: project / document */}
                       {currentSession.metadata.project && currentSession.metadata.document && (
                         <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-none shadow-sm">
                           {currentSession.metadata.language && (
@@ -347,6 +348,24 @@ export default function App() {
                             <span className="text-slate-400 dark:text-slate-500 mx-1.5">/</span>
                             <span className="font-mono text-primary dark:text-primary">{currentSession.metadata.document}</span>
                           </span>
+                        </div>
+                      )}
+
+                      {/* Browser-style: domain badge + page title (shown when parser finds project but no doc) */}
+                      {currentSession.metadata.project && !currentSession.metadata.document && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 rounded-none shadow-sm max-w-md">
+                          <Globe className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 shrink-0">
+                            {currentSession.metadata.project}
+                          </span>
+                          {currentSession.window_title && (
+                            <>
+                              <span className="text-blue-300 dark:text-blue-700 shrink-0">·</span>
+                              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+                                {currentSession.window_title.replace(/\s*-\s*[^-]+$/,'').replace(/\s*-\s*[^-]+$/,'').trim() || currentSession.window_title}
+                              </span>
+                            </>
+                          )}
                         </div>
                       )}
                       
@@ -362,9 +381,13 @@ export default function App() {
                               return `${m}:${s.toString().padStart(2, '0')}`;
                             };
                             return (
-                              <Badge variant="outline" className={`text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 text-slate-500'}`}>
-                                {yt.is_playing ? '▶️ PLAYING' : '⏸️ PAUSED'} {yt.current_time_seconds > 0 ? `• ${formatTime(yt.current_time_seconds)}` : ''} 
-                                {yt.channel_name ? ` • ${yt.channel_name}` : ''}
+                              <Badge variant="outline" className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                                {yt.is_playing
+                                  ? <PlayCircle className="h-3 w-3" />
+                                  : <PauseCircle className="h-3 w-3" />}
+                                <span>{yt.is_playing ? 'PLAYING' : 'PAUSED'}</span>
+                                {yt.current_time_seconds > 0 && <span>• {formatTime(yt.current_time_seconds)}</span>}
+                                {yt.channel_name && <span>• {yt.channel_name}</span>}
                               </Badge>
                             );
                           }

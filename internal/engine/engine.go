@@ -175,7 +175,14 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 	extEvent := e.priorityStates[20]
 
 	if osEvent != nil {
-		targetEvent = osEvent
+		copyOfOsEvent := *osEvent
+		if osEvent.Metadata != nil {
+			copyOfOsEvent.Metadata = make(map[string]string)
+			for k, v := range osEvent.Metadata {
+				copyOfOsEvent.Metadata[k] = v
+			}
+		}
+		targetEvent = &copyOfOsEvent
 
 		// Check if the currently focused OS application is a web browser
 		appName := strings.ToLower(osEvent.AppName)
@@ -224,9 +231,6 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 			} else {
 				newMeta["project"] = extEvent.AppID
 			}
-			
-			// Use the page title as the document
-			newMeta["document"] = extEvent.WindowTitle
 
 			enrichedEvent.Metadata = newMeta
 			targetEvent = &enrichedEvent
@@ -251,7 +255,6 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 			} else {
 				newMeta["project"] = extEvent.AppID
 			}
-			newMeta["document"] = extEvent.WindowTitle
 			
 			fallbackEvent.Metadata = newMeta
 			// Normalize to a generic browser app so it looks correct in the UI
@@ -267,6 +270,27 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		return
 	}
 
+	// Always use the timestamp of the event that triggered this evaluation!
+	// If we use an enriched event, its embedded timestamp will be from when the OS window was 
+	// originally focused, which causes massive overlapping backdated sessions on tab switches.
+	targetEvent.Timestamp = ev.Timestamp
+
+	// Extract context early so that activity:changed broadcasts have accurate metadata
+	// This prevents rapid identical events from wiping out UI tags before deduplication.
+	ctxData := parser.ExtractContext(targetEvent.AppName, targetEvent.WindowTitle)
+	earlyMeta := targetEvent.Metadata
+	if earlyMeta == nil {
+		earlyMeta = make(map[string]string)
+	}
+	for k, v := range ctxData {
+		if v != "" && v != targetEvent.WindowTitle {
+			if _, exists := earlyMeta[k]; !exists {
+				earlyMeta[k] = v
+			}
+		}
+	}
+	targetEvent.Metadata = earlyMeta
+
 	// Emit activity:changed event to Wails frontend subscribers
 	if e.wailsCtx != nil {
 		wailsRuntime.EventsEmit(e.wailsCtx, "activity:changed", *targetEvent)
@@ -281,6 +305,21 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 	if e.activeSession != nil {
 		isSameApp := e.activeSession.AppID == targetEvent.AppID
 		isSameWindow := e.activeSession.WindowTitle == targetEvent.WindowTitle
+		
+		// Advanced Deduplication for dynamic titles (like notification badges or browser media players)
+		if isSameApp && !isSameWindow {
+			if targetEvent.URL != "" && e.activeSession.URL == targetEvent.URL {
+				isSameWindow = true
+			} else if parser.CleanWindowTitle(e.activeSession.WindowTitle) == parser.CleanWindowTitle(targetEvent.WindowTitle) {
+				isSameWindow = true
+			}
+			
+			if isSameWindow {
+				// Title is functionally identical, but might have dynamic content (e.g. "(5) YouTube"). 
+				// Keep our active session updated to the latest dynamic title string for accuracy.
+				e.activeSession.WindowTitle = targetEvent.WindowTitle
+			}
+		}
 		
 		// Check if platform specific state changed (e.g. video paused/played)
 		isSamePlatformState := true
@@ -306,23 +345,6 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		}
 	}
 
-	// Extract sub-context (document/tab/project) from window title
-	ctxData := parser.ExtractContext(targetEvent.AppName, targetEvent.WindowTitle)
-	
-	meta := targetEvent.Metadata
-	if meta == nil {
-		meta = make(map[string]string)
-	}
-
-	for k, v := range ctxData {
-		if v != "" && v != targetEvent.WindowTitle {
-			// Don't overwrite authoritative metadata from the browser extension
-			if _, exists := meta[k]; !exists {
-				meta[k] = v
-			}
-		}
-	}
-
 	// Start new session span using the timestamp of the event that caused the transition
 	e.activeSession = &storage.SessionRecord{
 		AppID:           targetEvent.AppID,
@@ -333,7 +355,7 @@ func (e *Engine) handleNormalizedEvent(ctx context.Context, ev tracker.Normalize
 		StartedAt:       targetEvent.Timestamp,
 		EndedAt:         targetEvent.Timestamp,
 		DurationSeconds: 0,
-		Metadata:        meta,
+		Metadata:        targetEvent.Metadata,
 	}
 
 	if e.wailsCtx != nil {

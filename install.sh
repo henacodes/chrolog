@@ -60,6 +60,34 @@ if command -v update-desktop-database &> /dev/null; then
     update-desktop-database "$DESKTOP_DIR"
 fi
 
+# 5. GNOME Wayland Support
+if [[ "${XDG_CURRENT_DESKTOP,,}" == *"gnome"* || "${DESKTOP_SESSION,,}" == *"gnome"* ]]; then
+    echo "[5/5] GNOME desktop detected. Installing window tracker extension..."
+    EXT_UUID="chrolog@henacodes.com"
+    EXT_DIR="$HOME/.local/share/gnome-shell/extensions/$EXT_UUID"
+    mkdir -p "$EXT_DIR"
+    
+    # Try local first
+    if [ -f "extensions/gnome/metadata.json" ] && [ -f "extensions/gnome/extension.js" ]; then
+        cp extensions/gnome/metadata.json "$EXT_DIR/"
+        cp extensions/gnome/extension.js "$EXT_DIR/"
+        echo "Copied local GNOME extension."
+    else
+        echo "Downloading GNOME extension from GitHub..."
+        curl -sLf "https://raw.githubusercontent.com/$REPO/master/extensions/gnome/metadata.json" -o "$EXT_DIR/metadata.json" || true
+        curl -sLf "https://raw.githubusercontent.com/$REPO/master/extensions/gnome/extension.js" -o "$EXT_DIR/extension.js" || true
+    fi
+    
+    if command -v gnome-extensions &> /dev/null; then
+        gnome-extensions enable "$EXT_UUID" || true
+        echo "GNOME Extension enabled! (Note: You may need to log out and back in for it to take effect)."
+    else
+        echo "Please enable the Chrolog Window Tracker manually using the GNOME Extensions App."
+    fi
+else
+    echo "[5/5] Skipping GNOME extension (not running GNOME)."
+fi
+
 echo "========================================"
 echo "✅ Chrolog has been installed successfully!"
 echo "   You can now launch it from your application menu."

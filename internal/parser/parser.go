@@ -51,13 +51,18 @@ func extractLanguage(filename string) string {
 	return ""
 }
 
+// CleanWindowTitle strips notification badges and dynamic prefixes from titles.
+func CleanWindowTitle(title string) string {
+	return notificationRegex.ReplaceAllString(title, "")
+}
+
 // ExtractContext attempts to extract contextual data (e.g., document, project)
 // from a raw window title, based on common application patterns.
 func ExtractContext(appName, windowTitle string) map[string]string {
 	ctx := make(map[string]string)
 	
 	// Strip notification badges from window titles (e.g. "(5) YouTube" -> "YouTube")
-	windowTitle = notificationRegex.ReplaceAllString(windowTitle, "")
+	windowTitle = CleanWindowTitle(windowTitle)
 
 	app := strings.ToLower(appName)
 
@@ -118,7 +123,7 @@ func ExtractContext(appName, windowTitle string) map[string]string {
 	}
 
 	// Browsers
-	browsers := []string{"chrome", "firefox", "brave", "edge", "safari", "opera"}
+	browsers := []string{"chrome", "firefox", "brave", "edge", "safari", "opera", "browser"}
 	for _, b := range browsers {
 		if strings.Contains(app, b) {
 			// Usually: "Tab Title - Site Name - Google Chrome"
