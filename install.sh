@@ -22,7 +22,7 @@ mkdir -p "$ICON_DIR"
 echo "[2/4] Downloading latest binary from GitHub..."
 DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/chrolog"
 
-if ! curl -sLf "$DOWNLOAD_URL" -o "$INSTALL_DIR/chrolog.tmp"; then
+if ! curl -#Lf "$DOWNLOAD_URL" -o "$INSTALL_DIR/chrolog.tmp"; then
     echo "Error: Failed to download the binary. Are you sure you published a GitHub Release with a 'chrolog' asset?"
     exit 1
 fi
@@ -61,7 +61,7 @@ if command -v update-desktop-database &> /dev/null; then
 fi
 
 # 5. GNOME Wayland Support
-if [[ "${XDG_CURRENT_DESKTOP,,}" == *"gnome"* || "${DESKTOP_SESSION,,}" == *"gnome"* ]]; then
+if [[ ( "${XDG_CURRENT_DESKTOP,,}" == *"gnome"* || "${DESKTOP_SESSION,,}" == *"gnome"* ) ]] && command -v gnome-extensions &> /dev/null; then
     echo "[5/5] GNOME desktop detected. Installing window tracker extension..."
     EXT_UUID="chrolog@henacodes.com"
     EXT_DIR="$HOME/.local/share/gnome-shell/extensions/$EXT_UUID"
@@ -77,15 +77,11 @@ if [[ "${XDG_CURRENT_DESKTOP,,}" == *"gnome"* || "${DESKTOP_SESSION,,}" == *"gno
         curl -sLf "https://raw.githubusercontent.com/$REPO/master/extensions/gnome/metadata.json" -o "$EXT_DIR/metadata.json" || true
         curl -sLf "https://raw.githubusercontent.com/$REPO/master/extensions/gnome/extension.js" -o "$EXT_DIR/extension.js" || true
     fi
-    
-    if command -v gnome-extensions &> /dev/null; then
-        gnome-extensions enable "$EXT_UUID" || true
-        echo "GNOME Extension enabled! (Note: You may need to log out and back in for it to take effect)."
-    else
-        echo "Please enable the Chrolog Window Tracker manually using the GNOME Extensions App."
-    fi
+
+    gnome-extensions enable "$EXT_UUID" || true
+    echo "GNOME Extension installed and enabled! (Note: You may need to log out and back in for it to take effect)."
 else
-    echo "[5/5] Skipping GNOME extension (not running GNOME)."
+    echo "[5/5] Skipping GNOME extension (not running GNOME or gnome-extensions missing)."
 fi
 
 echo "========================================"
