@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           const url = new URL(tab.url)
           if (url.protocol !== 'chrome:' && url.protocol !== 'chrome-extension:' && url.protocol !== 'edge:') {
-            const appId = url.hostname
+            const appId = url.protocol === 'file:' ? 'local_file' : url.hostname
             let windowTitle = tab.title || appId
 
             try {
@@ -84,10 +84,13 @@ async function sendTrackingEvent(tabId?: number) {
     try {
       const url = new URL(tab.url)
       // Ignore internal browser pages
-      if (url.protocol === 'chrome:' || url.protocol === 'chrome-extension:' || url.protocol !== 'http:' && url.protocol !== 'https:') {
+      if (url.protocol === 'chrome:' || url.protocol === 'chrome-extension:' || url.protocol === 'edge:') {
         return
       }
-      appId = url.hostname
+      if (url.protocol !== 'http:' && url.protocol !== 'https:' && url.protocol !== 'file:') {
+        return
+      }
+      appId = url.protocol === 'file:' ? 'local_file' : url.hostname
     } catch (e) {
       // Invalid URL
       return

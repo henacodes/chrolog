@@ -3,6 +3,57 @@ function extractPageMetadata() {
     title: document.title
   };
 
+  const isPdf = window.location.pathname.toLowerCase().endsWith('.pdf') || document.contentType === 'application/pdf';
+  if (isPdf) {
+    metadata['category'] = 'document';
+    
+    let decodedPath = window.location.pathname;
+    try {
+      decodedPath = decodeURIComponent(window.location.pathname);
+    } catch (e) {}
+
+    const filename = decodedPath.split('/').pop() || 'document.pdf';
+    metadata['document'] = filename;
+
+    const isLocal = window.location.protocol === 'file:';
+    metadata['platform_specific'] = JSON.stringify({
+      pdf: {
+        path: decodedPath,
+        is_local: isLocal,
+      }
+    });
+
+    if (isLocal) {
+      const parts = decodedPath.split('/');
+      parts.pop(); // remove filename
+      
+      const anchors = ['Documents', 'Downloads', 'Desktop', 'Music', 'Videos', 'Pictures'];
+      let projectPath = '';
+      
+      for (let i = 0; i < parts.length; i++) {
+        if (anchors.includes(parts[i])) {
+          const remaining = parts.slice(i + 1);
+          if (remaining.length > 0) {
+            projectPath = remaining.join('/');
+          }
+          break;
+        }
+      }
+      
+      if (!projectPath) {
+        if (parts.length > 2) {
+           projectPath = parts.slice(-2).join('/');
+        } else {
+           projectPath = parts.join('/') || 'Local Files';
+        }
+      }
+      
+      metadata['project'] = projectPath.replace(/^\/+|\/+$/g, '') || 'Local Files';
+    } else {
+      metadata['project'] = window.location.hostname;
+    }
+  }
+
   const getMeta = (selector: string) => {
     const el = document.querySelector(selector);
     return el ? el.getAttribute('content') : null;

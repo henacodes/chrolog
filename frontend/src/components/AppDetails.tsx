@@ -34,14 +34,16 @@ function getDocumentIcon(appId: string, label: string, url?: string, language?: 
   const browserApps = ['google-chrome', 'msedge', 'brave-browser', 'browser', 'firefox', 'safari']
   if (browserApps.includes(appId.toLowerCase())) {
     if (url) {
+      if (url.startsWith('file://')) return null;
       try {
         const hostname = new URL(url).hostname
-        return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+        if (hostname) return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
       } catch (e) {
         // Invalid URL, fall back
       }
     } else {
       let domain = project || ''
+      if (domain && (domain.includes('/') || domain.includes('\\'))) return null;
       if (!domain) {
         const lower = label.toLowerCase()
         if (lower.includes('youtube')) domain = 'youtube.com'
@@ -138,8 +140,9 @@ interface SessionRecord {
 function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocument }: { group: any, appId: string, maxDuration: number, formatDuration: (s: number) => string, onSelectDocument: (doc: any) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   
-  // Try to fetch icon for the project level
-  const iconUrl = getDocumentIcon(appId, group.project)
+  // Try to fetch icon for the project level using the first valid web URL from children
+  const firstUrl = group.items.find((item: any) => item.url && !item.url.startsWith('file://'))?.url
+  const iconUrl = getDocumentIcon(appId, group.project, firstUrl)
   
   const widthPercent = maxDuration > 0 ? (group.totalDuration / maxDuration) * 100 : 0
   const hasChildren = group.items.length > 0
@@ -233,6 +236,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
   const [timeframe, setTimeframe] = useState<string>("today") // today, week, month
 
   const [viewMode, setViewMode] = useState<"graphs" | "documents">("graphs")
+  const [listMode, setListMode] = useState<"web" | "files">("web")
   const [documents, setDocuments] = useState<AppUsageStat[]>([])
   const [isLoading, setIsLoading] = useState(false)
   
@@ -280,7 +284,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
 
   // Memoize grouped documents hierarchy at top level for React Rules of Hooks
   const nestedDocs = useMemo(() => {
-    const map = new Map<string, { totalDuration: number; items: any[] }>()
+    const map = new Map<string, { totalDuration: number; items: any[]; isLocal: boolean }>()
     documents.forEach((d) => {
       let project = d.label
       let docName = d.label
@@ -292,11 +296,19 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
       }
 
       if (!map.has(project)) {
-        map.set(project, { totalDuration: 0, items: [] })
+        map.set(project, { totalDuration: 0, items: [], isLocal: false })
       }
 
       const group = map.get(project)!
       group.totalDuration += d.duration_seconds
+      
+      // A document is "local" only if its URL is a file:// URL, or its project
+      // is explicitly "Local Files" (set by our content script for local PDFs).
+      // We intentionally do NOT use label string heuristics like '/' or '.pdf'
+      // because web content labels also contain '/' separators.
+      const isItemLocal = !!(d.url?.startsWith('file://') || project === 'Local Files')
+      if (isItemLocal) group.isLocal = true
+
       if (project !== docName) {
         group.items.push({ label: docName, duration: d.duration_seconds, url: d.url })
       }
@@ -307,9 +319,14 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
         project,
         totalDuration: data.totalDuration,
         items: data.items.sort((a, b) => b.duration - a.duration),
+        isLocal: data.isLocal
       }))
       .sort((a, b) => b.totalDuration - a.totalDuration)
   }, [documents])
+
+  const webGroups = useMemo(() => nestedDocs.filter(g => !g.isLocal), [nestedDocs])
+  const fileGroups = useMemo(() => nestedDocs.filter(g => g.isLocal), [nestedDocs])
+  const displayedGroups = listMode === "web" ? webGroups : fileGroups
 
   const maxDuration = useMemo(
     () => (nestedDocs.length > 0 ? Math.max(...nestedDocs.map((d) => d.totalDuration)) : 0),
@@ -519,17 +536,48 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                     )}
 
                     {/* Accordion List */}
-                    <div className="space-y-2">
-                      {nestedDocs.map((group, idx) => (
-                        <AccordionItem 
-                          key={idx} 
-                          group={group} 
-                          appId={appId} 
-                          maxDuration={maxDuration} 
-                          formatDuration={formatDuration} 
-                          onSelectDocument={setActiveDocument}
-                        />
-                      ))}
+                    <div className="space-y-4 pt-4">
+                      {fileGroups.length > 0 && (
+                        <div className="flex items-center gap-2 border-b border-border pb-2">
+                          <button
+                            onClick={() => setListMode("web")}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              listMode === "web"
+                                ? "bg-accent text-slate-900 dark:text-slate-100 shadow-sm"
+                                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-accent/50"
+                            }`}
+                          >
+                            Websites
+                          </button>
+                          <button
+                            onClick={() => setListMode("files")}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              listMode === "files"
+                                ? "bg-accent text-slate-900 dark:text-slate-100 shadow-sm"
+                                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-accent/50"
+                            }`}
+                          >
+                            Local Files
+                          </button>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                        {displayedGroups.length > 0 ? (
+                          displayedGroups.map((group, idx) => (
+                            <AccordionItem 
+                              key={idx} 
+                              group={group} 
+                              appId={appId} 
+                              maxDuration={maxDuration} 
+                              formatDuration={formatDuration} 
+                              onSelectDocument={setActiveDocument}
+                            />
+                          ))
+                        ) : (
+                          <div className="py-8 text-center text-slate-500 text-sm">No items found in this category.</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

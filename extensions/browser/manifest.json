@@ -12,6 +12,7 @@
   ],
   "host_permissions": [
     "http://127.0.0.1:1738/",
+    "file:///*",
     "<all_urls>"
   ],
   "background": {
@@ -20,7 +21,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["<all_urls>", "file:///*"],
       "js": ["src/content/content.ts"]
     }
   ]
