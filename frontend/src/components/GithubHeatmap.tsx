@@ -49,7 +49,7 @@ export function GithubHeatmap({ appId, appName }: GithubHeatmapProps) {
   return (
     <Card className="border border-border bg-card mt-6">
       <CardHeader>
-        <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+        <CardTitle className="text-xl font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Activity className="w-5 h-5" />
           Yearly Activity Heatmap
         </CardTitle>

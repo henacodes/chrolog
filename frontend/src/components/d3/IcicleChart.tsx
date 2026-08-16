@@ -27,14 +27,11 @@ function defaultFormat(val: number): string {
 }
 
 const COLOR_PALETTE = [
-  "#558B2F",
-  "#0d9488",
-  "#d97706",
-  "#0284c7",
-  "#8b5cf6",
-  "#ec4899",
-  "#64748b",
-  "#14b8a6",
+  '#609fa5', // Soft Teal
+  '#d1b96e', // Soft Mustard
+  '#b55c5a', // Soft Red
+  '#e5ddc5', // Soft Warm Gray
+  '#445a6f', // Soft Navy
 ]
 
 export function IcicleChart({
@@ -285,8 +282,8 @@ export function IcicleChart({
   return (
     <div className="w-full flex flex-col space-y-2 relative" ref={containerRef}>
       {/* Breadcrumb */}
-      <div className="flex items-center flex-wrap gap-1.5 text-xs font-mono bg-slate-100 dark:bg-slate-900 p-2 rounded-none border border-border">
-        <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mr-1">
+      <div className="flex items-center flex-wrap gap-1.5 text-xs bg-secondary p-2 rounded-xl border border-border">
+        <span className="text-slate-500 font-medium uppercase text-[10px] tracking-widest mr-1">
           Hierarchy:
         </span>
         {breadcrumb.map((item, idx) => (
@@ -295,10 +292,10 @@ export function IcicleChart({
             <button
               type="button"
               onClick={() => handleBreadcrumbClick(item)}
-              className={`px-1.5 py-0.5 font-bold transition-colors ${
+              className={`px-1.5 py-0.5 font-medium transition-colors ${
                 idx === breadcrumb.length - 1
-                  ? "bg-primary text-white dark:text-slate-950"
-                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                  ? "bg-primary/20 text-primary"
+                  : "text-slate-700 dark:text-slate-300 hover:bg-accent cursor-pointer"
               }`}
             >
               {item.data.name}
@@ -308,7 +305,7 @@ export function IcicleChart({
       </div>
 
       {/* SVG */}
-      <div className="w-full overflow-hidden bg-card border border-border rounded-none">
+      <div className="w-full overflow-hidden bg-card border border-border rounded-xl">
         <svg ref={svgRef} className="w-full block" />
       </div>
     </div>

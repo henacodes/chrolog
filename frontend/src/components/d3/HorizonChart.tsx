@@ -118,7 +118,7 @@ export function HorizonChart({
         .y1((d) => yScale(d.value))
         .curve(d3.curveMonotoneX)
 
-      const baseColor = s.color || "#558B2F"
+      const baseColor = s.color || "#257a82"
       // Generate colors for bands (light to dark)
       const colors = d3.schemeBlues[Math.max(3, Math.min(9, bands + 2))] || d3.quantize(d3.interpolateBlues, bands)
       // If a custom color is provided, we can interpolate from white to that color
@@ -203,8 +203,8 @@ export function HorizonChart({
               .style("top", `${event.offsetY - 35}px`)
               .style("left", `${Math.min(event.offsetX + 15, width - 150)}px`)
               .html(
-                `<div class="font-bold text-xs">${s.name}</div>` +
-                  `<div class="text-[10px] opacity-75">${dateStr}: <span class="font-mono font-bold text-primary">${formatValue(
+                `<div class="font-medium text-xs">${s.name}</div>` +
+                  `<div class="text-[10px] opacity-75">${dateStr}: <span class=" font-medium text-primary">${formatValue(
                     closest.value
                   )}</span></div>`
               )
@@ -215,7 +215,7 @@ export function HorizonChart({
   }, [series, bands, rowHeight, formatValue])
 
   return (
-    <div className="w-full relative overflow-hidden bg-card rounded-none" ref={containerRef}>
+    <div className="w-full relative overflow-hidden bg-card rounded-xl" ref={containerRef}>
       <svg ref={svgRef} className="w-full block" />
     </div>
   )

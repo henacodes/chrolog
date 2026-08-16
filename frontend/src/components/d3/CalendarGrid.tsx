@@ -57,11 +57,11 @@ export function CalendarGrid({
       .scaleThreshold<number, string>()
       .domain([1, maxVal * 0.25, maxVal * 0.5, maxVal * 0.75])
       .range([
-        "hsl(var(--muted)/0.4)", // 0: no activity
-        "#d6e685", // Level 1
-        "#8cc665", // Level 2
-        "#44a340", // Level 3
-        "#1e6823", // Level 4
+        "var(--secondary)", // 0: no activity
+        "#d1b96e", // Level 1 (Soft Mustard)
+        "#c58b68", // Level 2
+        "#b55c5a", // Level 3 (Soft Red)
+        "#8a4947", // Level 4 (Dark Soft Red)
       ])
 
     // Generate 365 days for the target year
@@ -142,8 +142,8 @@ export function CalendarGrid({
         tooltip
           .style("visibility", "visible")
           .html(
-            `<div class="font-bold text-xs">${displayDate}</div>` +
-              `<div class="text-[11px] font-mono text-primary mt-0.5">${formatValue(val)}</div>`
+            `<div class="font-medium text-xs">${displayDate}</div>` +
+              `<div class="text-[11px]  text-primary mt-0.5">${formatValue(val)}</div>`
           )
       })
       .on("mousemove", function (event) {
@@ -160,18 +160,18 @@ export function CalendarGrid({
   }, [data, year, formatValue])
 
   return (
-    <div className="w-full relative overflow-hidden bg-card border border-border rounded-none p-4 space-y-2" ref={containerRef}>
+    <div className="w-full relative overflow-hidden bg-card border border-border rounded-xl p-4 space-y-2" ref={containerRef}>
       <svg ref={svgRef} className="w-full block" />
 
       {/* Activity Strength Legend */}
-      <div className="flex items-center justify-end gap-2 text-xs text-slate-500 font-mono pt-1 border-t border-border/40">
+      <div className="flex items-center justify-end gap-2 text-xs text-slate-500  pt-1 border-t border-border/40">
         <span>Less</span>
         <div className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-800/80 border border-slate-300/40 dark:border-slate-700/40" title="No activity (0)" />
-          <span className="w-3 h-3 rounded-sm bg-[#d6e685]" title="Low activity" />
-          <span className="w-3 h-3 rounded-sm bg-[#8cc665]" title="Medium activity" />
-          <span className="w-3 h-3 rounded-sm bg-[#44a340]" title="High activity" />
-          <span className="w-3 h-3 rounded-sm bg-[#1e6823]" title="Very high activity" />
+          <span className="w-3 h-3 rounded-sm bg-secondary border border-border" title="No activity (0)" />
+          <span className="w-3 h-3 rounded-sm bg-[#d1b96e]" title="Low activity" />
+          <span className="w-3 h-3 rounded-sm bg-[#c58b68]" title="Medium activity" />
+          <span className="w-3 h-3 rounded-sm bg-[#b55c5a]" title="High activity" />
+          <span className="w-3 h-3 rounded-sm bg-[#8a4947]" title="Very high activity" />
         </div>
         <span>More</span>
       </div>

@@ -12,11 +12,11 @@ import { format, parseISO } from "date-fns"
 import "./style.css"
 
 const COLORS = [
-  '#558B2F', // Primary Green
-  '#0d9488', // Teal
-  '#d97706', // Amber
-  '#475569', // Slate
-  '#94a3b8', // Light Slate
+  '#609fa5', // Soft Teal
+  '#d1b96e', // Soft Mustard
+  '#b55c5a', // Soft Red
+  '#e5ddc5', // Soft Warm Gray
+  '#445a6f', // Soft Navy
 ];
 
 const LanguageIcon = ({ language }: { language: string }) => {
@@ -32,7 +32,7 @@ const LanguageIcon = ({ language }: { language: string }) => {
   if (lang === 'rs') lang = 'rust';
   
   if (error) {
-    return <div className="w-4 h-4 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-[8px] font-bold text-slate-500 uppercase">{language.substring(0, 2)}</div>;
+    return <div className="w-4 h-4 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-[8px] font-medium text-slate-500 uppercase">{language.substring(0, 2)}</div>;
   }
   
   return (
@@ -261,20 +261,15 @@ export default function App() {
       {/* Main App Container */}
       <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Navbar */}
-        <header className="timeline-ruler rounded-none p-5 border border-border bg-card flex flex-wrap items-center justify-between gap-4 shadow-none">
+        <header className="flex flex-wrap items-center justify-between gap-4 py-2">
           <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-none bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center justify-center shadow-none">
-              <Zap className="h-6 w-6 fill-current" />
-            </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                CHROLOG
-                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-none bg-emerald-100 dark:bg-primary/20 text-emerald-800 dark:text-primary border border-emerald-200 dark:border-primary/40 uppercase tracking-widest">
-                  Overview
-                </span>
+              <h1 className="text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Zap className="h-6 w-6 text-primary" />
+                Chrolog
               </h1>
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                A Robust Time Tracker
+              <p className="text-sm font-normal text-slate-500 dark:text-slate-400">
+                Your daily time overview
               </p>
             </div>
           </div>
@@ -282,11 +277,11 @@ export default function App() {
           {/* Right Controls */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Adapter Indicators */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-background border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300">
               <Cpu className="h-3.5 w-3.5 text-primary dark:text-primary" />
               <span>Adapters:</span>
               {adapters.map((a) => (
-                <Badge key={a.id} variant="secondary" className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-none">
+                <Badge key={a.id} variant="secondary" className="text-[10px] uppercase  px-2 py-0.5 rounded-xl">
                   {a.id}
                 </Badge>
               ))}
@@ -298,13 +293,13 @@ export default function App() {
               variant={isPaused ? "destructive" : "default"}
               size="sm"
               onClick={handleToggleTracking}
-              className="gap-2 shadow-none uppercase tracking-wider font-black text-xs rounded-none"
+              className="gap-2 shadow-none font-medium text-xs rounded-xl"
             >
               {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
               {isPaused ? "Resume" : "Pause"}
             </Button>
 
-            <Button variant="outline" size="icon" onClick={fetchData} disabled={isRefreshing} className="h-9 w-9 rounded-none">
+            <Button variant="outline" size="icon" onClick={fetchData} disabled={isRefreshing} className="h-9 w-9 rounded-xl">
               <RefreshCw className={`h-4 w-4 text-slate-700 dark:text-slate-300 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
@@ -320,22 +315,22 @@ export default function App() {
                 <div className="flex items-center justify-between pb-3">
                   <div className="flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary dark:text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-primary dark:text-primary">
+                    <span className="text-xs font-medium uppercase tracking-widest text-primary dark:text-primary">
                       Current Active Focus
                     </span>
                   </div>
-                  <Badge variant={isPaused ? "destructive" : "lime"} className="flex items-center gap-1.5 px-3 py-1 rounded-none">
-                    <span className={`h-2 w-2 rounded-none ${isPaused ? "bg-slate-400" : "bg-primary dark:bg-primary animate-pulse"}`} />
+                  <Badge variant={isPaused ? "destructive" : "lime"} className="flex items-center gap-1.5 px-3 py-1 rounded-xl">
+                    <span className={`h-2 w-2 rounded-xl ${isPaused ? "bg-slate-400" : "bg-primary dark:bg-primary animate-pulse"}`} />
                     <span className="leading-none pt-[1px]">{isPaused ? "Paused" : "Live Streaming"}</span>
                   </Badge>
                 </div>
 
                 <div className="space-y-4">
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-medium text-slate-900 dark:text-slate-100 tracking-tight">
                     {currentSession ? currentSession.app_name || currentSession.app_id : "No Active Window"}
                   </h2>
 
-                  <div className="p-4 rounded-none bg-background border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 truncate shadow-none">
+                  <div className="p-4 rounded-xl bg-background border border-slate-200 dark:border-slate-800  text-sm text-slate-900 dark:text-slate-100 truncate shadow-none">
                     {currentSession?.window_title || "Untitled Focus State"}
                   </div>
                   
@@ -344,30 +339,30 @@ export default function App() {
                     <div className="flex flex-col gap-3 pt-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {currentSession.metadata.category && (
-                          <Badge variant="secondary" className="text-xs uppercase font-black px-2 py-1 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          <Badge variant="secondary" className="text-xs uppercase font-medium px-2 py-1 rounded-xl">
                             {currentSession.metadata.category}
                           </Badge>
                         )}
 
                         {/* IDE-style: project / document */}
                         {currentSession.metadata.project && currentSession.metadata.document && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-none shadow-sm">
+                          <div className="flex items-center gap-2 px-3 py-1.5 border border-border bg-secondary/50 rounded-xl shadow-sm">
                             {currentSession.metadata.language && (
                               <LanguageIcon language={currentSession.metadata.language} />
                             )}
-                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            <span className="text-xs font-medium text-slate-900 dark:text-slate-100">
                               {currentSession.metadata.project}
                               <span className="text-slate-400 dark:text-slate-500 mx-1.5">/</span>
-                              <span className="font-mono text-primary dark:text-primary">{currentSession.metadata.document}</span>
+                              <span className=" text-primary dark:text-primary">{currentSession.metadata.document}</span>
                             </span>
                           </div>
                         )}
 
                         {/* Browser-style: domain badge + page title (shown when parser finds project but no doc) */}
                         {currentSession.metadata.project && !currentSession.metadata.document && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 rounded-none shadow-sm max-w-md">
+                          <div className="flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/5 rounded-xl shadow-sm max-w-md">
                             <Globe className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 shrink-0">
+                            <span className="text-[10px] font-medium uppercase tracking-widest text-blue-600 dark:text-blue-400 shrink-0">
                               {currentSession.metadata.project}
                             </span>
                             {currentSession.window_title && (
@@ -393,7 +388,7 @@ export default function App() {
                                 return `${m}:${s.toString().padStart(2, '0')}`;
                               };
                               return (
-                                <Badge variant="outline" className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-none border ${yt.is_playing ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                                <Badge variant="outline" className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-xl border ${yt.is_playing ? 'border-destructive/30 text-destructive bg-destructive/10' : 'border-border text-muted-foreground'}`}>
                                   {yt.is_playing
                                     ? <PlayCircle className="h-3 w-3" />
                                     : <PauseCircle className="h-3 w-3" />}
@@ -414,7 +409,7 @@ export default function App() {
                       {(currentSession.metadata.site_name || currentSession.metadata.description) && (
                         <div className="text-sm text-slate-600 dark:text-slate-400 border-l-2 border-primary/40 pl-4 py-1 mt-2">
                           {currentSession.metadata.site_name && (
-                            <div className="font-bold text-slate-800 dark:text-slate-200 mb-1 tracking-tight">
+                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-1 tracking-tight">
                               {currentSession.metadata.site_name}
                             </div>
                           )}
@@ -430,18 +425,18 @@ export default function App() {
 
                   <div className="flex flex-wrap items-end justify-between gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                     <div>
-                      <div className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">Duration Elapsed</div>
-                      <div className="text-4xl sm:text-5xl font-black text-primary dark:text-primary font-mono tracking-tight mt-1">
+                      <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Duration Elapsed</div>
+                      <div className="text-4xl sm:text-5xl font-medium text-primary dark:text-primary  tracking-tight mt-1">
                         {formatDuration(currentSession?.duration_seconds || 0)}
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="text-xs font-mono uppercase rounded-none">
+                      <Badge variant="outline" className="text-xs  uppercase rounded-xl">
                         Source: {currentSession?.source || "None"}
                       </Badge>
                       {currentSession?.started_at && (
-                        <Badge variant="outline" className="text-xs font-mono rounded-none">
+                        <Badge variant="outline" className="text-xs  rounded-xl">
                           Started {formatTime(currentSession.started_at)}
                         </Badge>
                       )}
@@ -455,7 +450,7 @@ export default function App() {
             <Card className="border border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <div>
-                  <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                  <CardTitle className="text-lg font-medium flex items-center gap-2 text-slate-900 dark:text-slate-100">
                     <BarChart3 className="h-5 w-5 text-primary dark:text-primary" />
                     Usage Overview
                   </CardTitle>
@@ -463,12 +458,12 @@ export default function App() {
                 </div>
 
                 {/* Timeframe Selector */}
-                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium">
                   {["today", "24h", "7d"].map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded-none transition-all uppercase text-[11px] font-black ${timeframe === tf
+                      className={`px-3 py-1 rounded-xl transition-all uppercase text-[11px] font-medium ${timeframe === tf
                         ? "bg-primary dark:bg-primary text-white dark:text-slate-950 shadow-none"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                         }`}
@@ -542,7 +537,7 @@ export default function App() {
                     return liveStats.map((stat) => (
                       <div
                         key={stat.app_id}
-                        className="space-y-2 p-3 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        className="space-y-2 p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer border border-transparent hover:border-border"
                         onClick={() => {
                           setActiveAppId(stat.app_id)
                           setActiveAppName(stat.app_name || stat.app_id)
@@ -551,19 +546,19 @@ export default function App() {
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-3">
                             {iconCache[stat.app_id] && iconCache[stat.app_id] !== "NONE" ? (
-                              <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-none object-contain" />
+                              <img src={iconCache[stat.app_id]} alt={stat.app_name} className="w-5 h-5 rounded-xl object-contain" />
                             ) : (
                               <div className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500">
                                 <AppWindow className="w-4 h-4" />
                               </div>
                             )}
-                            <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">
+                            <span className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[300px]">
                               {stat.app_name || stat.app_id}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs font-mono">
+                          <div className="flex items-center gap-3 text-xs ">
                             <span className="text-slate-600 dark:text-slate-400 font-semibold">{formatDuration(stat.total_duration_seconds)}</span>
-                            <span className="font-black text-primary dark:text-primary w-12 text-right">
+                            <span className="font-medium text-primary dark:text-primary w-12 text-right">
                               {stat.percentage.toFixed(1)}%
                             </span>
                           </div>
@@ -592,7 +587,7 @@ export default function App() {
                     {
                       id: "total_tracked",
                       name: "Total Active Focus",
-                      color: "#558B2F",
+                      color: "#257a82",
                       values: trendStats.map((t) => ({
                         date: t.label,
                         value: t.duration_seconds,
@@ -606,7 +601,7 @@ export default function App() {
               {appStats.length > 0 && (
                 <Card className="border border-border bg-card">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                    <CardTitle className="text-lg font-medium flex items-center gap-2 text-slate-900 dark:text-slate-100">
                       <BarChart3 className="h-5 w-5 text-primary dark:text-primary" />
                       App Composition Hierarchy (Flame Graph)
                     </CardTitle>
@@ -631,7 +626,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="mt-auto py-6 bg-card border-t border-border">
-        <div className="max-w-5xl mx-auto px-4 text-center text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center justify-center gap-2">
+        <div className="max-w-5xl mx-auto px-4 text-center text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center justify-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary dark:text-primary" />
           <span>Chrolog Time Tracker &bull; 100% Local Privacy</span>
         </div>

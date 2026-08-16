@@ -10,7 +10,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     <div
       ref={ref}
       className={cn(
-        "relative h-2.5 w-full overflow-hidden rounded-none bg-slate-200 dark:bg-slate-800 border border-slate-300/40 dark:border-slate-700/40",
+        "relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800",
         className
       )}
       {...props}

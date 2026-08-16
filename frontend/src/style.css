@@ -1,75 +1,110 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.841 0.238 128.85);
-  --primary-foreground: oklch(0.405 0.101 131.063);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.897 0.196 126.665);
-  --chart-2: oklch(0.768 0.233 130.85);
-  --chart-3: oklch(0.648 0.2 131.684);
-  --chart-4: oklch(0.532 0.157 131.589);
-  --chart-5: oklch(0.453 0.124 130.933);
-  --radius: 0;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.648 0.2 131.684);
-  --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
-}
+    /* Base Neutral Scale (Light) */
+    --light-50: oklch(0.985 0.002 100);
+    --light-100: oklch(0.965 0.005 100);
+    --light-200: oklch(0.92 0.01 100);
+    --light-800: oklch(0.4 0.02 100);
+    --light-900: oklch(0.3 0.03 100);
+    --light-1000: oklch(0.2 0.03 100);
+    --light-1100: oklch(0.15 0.03 100);
 
-.dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.768 0.233 130.85);
-  --primary-foreground: oklch(0.405 0.101 131.063);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.897 0.196 126.665);
-  --chart-2: oklch(0.768 0.233 130.85);
-  --chart-3: oklch(0.648 0.2 131.684);
-  --chart-4: oklch(0.532 0.157 131.589);
-  --chart-5: oklch(0.453 0.124 130.933);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.768 0.233 130.85);
-  --sidebar-primary-foreground: oklch(0.274 0.072 132.109);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
-}
+    /* Base Neutral Scale (Dark/Warm Charcoal derived from inspiration) */
+    --dark-50: oklch(0.95 0.01 50);
+    --dark-100: oklch(0.88 0.01 50);
+    --dark-200: oklch(0.8 0.01 50);
+    --dark-500: oklch(0.5 0.01 50);
+    --dark-700: oklch(0.35 0.01 50);
+    --dark-800: oklch(0.30 0.01 50);
+    --dark-900: oklch(0.27 0.01 50);
+    --dark-1000: oklch(0.25 0.01 50);
+    --dark-1100: oklch(0.22 0.01 50);
+
+    --radius: 0.75rem;
+
+    /* Light Theme Mapping */
+    --background: var(--light-50);
+    --foreground: var(--light-900);
+
+    --card: oklch(1 0 0);
+    --card-foreground: var(--light-900);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: var(--light-1000);
+
+    /* Ocean Sunset Accents */
+    --ocean-navy: oklch(0.35 0.08 250);
+    --ocean-teal: oklch(0.6 0.1 190);
+    --ocean-yellow: oklch(0.9 0.08 90);
+    --ocean-mustard: oklch(0.7 0.15 70);
+    --ocean-red: oklch(0.55 0.15 30);
+
+    --primary: var(--ocean-teal);
+    --primary-foreground: oklch(1 0 0);
+
+    --secondary: var(--light-100);
+    --secondary-foreground: var(--light-800);
+
+    --muted: var(--light-100);
+    --muted-foreground: var(--light-800);
+
+    --accent: var(--light-200);
+    --accent-foreground: var(--light-1100);
+
+    --destructive: var(--ocean-red);
+    --destructive-foreground: oklch(1 0 0);
+
+    --border: var(--light-200);
+    --input: var(--light-200);
+    --ring: var(--ocean-teal);
+
+    --chart-1: var(--ocean-navy);
+    --chart-2: var(--ocean-teal);
+    --chart-3: var(--ocean-yellow);
+    --chart-4: var(--ocean-mustard);
+    --chart-5: var(--ocean-red);
+  }
+
+  .dark {
+    /* Dark Theme Mapping (Muted Bento Box Vibe) */
+    --background: var(--dark-1100);
+    --foreground: var(--dark-50);
+
+    --card: var(--dark-1000);
+    --card-foreground: var(--dark-50);
+
+    --popover: var(--dark-900);
+    --popover-foreground: var(--dark-50);
+
+    --primary: var(--ocean-teal);
+    --primary-foreground: var(--dark-1100);
+
+    --secondary: var(--dark-800);
+    --secondary-foreground: var(--dark-200);
+
+    --muted: var(--dark-800);
+    --muted-foreground: var(--dark-200);
+
+    --accent: var(--dark-900);
+    --accent-foreground: var(--dark-100);
+
+    --destructive: var(--ocean-red);
+    --destructive-foreground: var(--dark-50);
+
+    --border: var(--dark-1000); /* Slightly lighter than background, almost invisible */
+    --input: var(--dark-900);
+    --ring: var(--ocean-teal);
+
+    --chart-1: var(--ocean-teal);
+    --chart-2: var(--ocean-yellow);
+    --chart-3: var(--ocean-mustard);
+    --chart-4: var(--ocean-red);
+    --chart-5: var(--ocean-navy);
+  }
 }
 
 @theme {
@@ -96,27 +131,19 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
   --radius: var(--radius);
 }
 
 @layer base {
   * {
     border-color: var(--border);
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
   html, body, #root {
     min-height: 100vh;
     background-color: var(--background) !important;
     color: var(--foreground) !important;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Lexend', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
   }
 }
@@ -126,7 +153,7 @@
     font-family: 'Space Mono', monospace;
   }
   
-  /* The Timeline Ruler Signature */
+  /* Softened Timeline Ruler for the new theme */
   .timeline-ruler {
     background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
                       linear-gradient(to right, var(--border) 1px, transparent 1px);
@@ -137,10 +164,10 @@
   }
 }
 
-/* Custom Flat Scrollbars */
+/* Custom Soft Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -149,7 +176,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 0px;
+  border-radius: 9999px; /* Fully rounded scrollbars match the theme! */
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -157,11 +184,11 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 0px;
+  border-radius: 9999px;
 }

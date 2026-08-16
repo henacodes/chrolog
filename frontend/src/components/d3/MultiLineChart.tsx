@@ -266,7 +266,7 @@ export function MultiLineChart({
           ? d3.timeFormat("%H:%M")(dateAtMouse)
           : d3.timeFormat("%b %d, %Y")(dateAtMouse)
 
-        let tooltipHtml = `<div class="text-[10px] text-slate-400 font-mono mb-1">${timeLabel}</div>`
+        let tooltipHtml = `<div class="text-[10px] text-slate-400  mb-1">${timeLabel}</div>`
 
         parsedSeries.forEach((s) => {
           if (s.parsedValues.length === 0) return
@@ -282,7 +282,7 @@ export function MultiLineChart({
           if (closest) {
             tooltipHtml += `<div class="flex items-center justify-between gap-3 text-xs">`
             tooltipHtml += `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${s.color}"></span>${s.name}</span>`
-            tooltipHtml += `<span class="font-mono font-bold" style="color:${s.color}">${formatValue(closest.value)}</span>`
+            tooltipHtml += `<span class=" font-medium" style="color:${s.color}">${formatValue(closest.value)}</span>`
             tooltipHtml += `</div>`
           }
         })
@@ -300,10 +300,10 @@ export function MultiLineChart({
   }, [series, height, hiddenSeries, formatValue])
 
   return (
-    <div className="w-full relative bg-card border border-border rounded-none p-4 space-y-3" ref={containerRef}>
+    <div className="w-full relative bg-card border border-border rounded-xl p-4 space-y-3" ref={containerRef}>
       {(title || subtitle) && (
         <div className="flex flex-col space-y-0.5">
-          {title && <h3 className="text-base font-black tracking-tight text-foreground">{title}</h3>}
+          {title && <h3 className="text-base font-medium tracking-tight text-foreground">{title}</h3>}
           {subtitle && <p className="text-xs text-slate-500 font-medium">{subtitle}</p>}
         </div>
       )}
@@ -321,7 +321,7 @@ export function MultiLineChart({
             <button
               key={s.id}
               onClick={() => toggleSeries(s.id)}
-              className={`flex items-center gap-2 px-2.5 py-1 text-xs font-bold rounded-none border transition-all ${
+              className={`flex items-center gap-2 px-2.5 py-1 text-xs font-medium rounded-xl border transition-all ${
                 isHidden
                   ? "border-slate-300 dark:border-slate-800 text-slate-400 opacity-50 line-through"
                   : "border-border text-foreground shadow-none"

@@ -33,18 +33,18 @@ export function ThemeToggle() {
       variant="outline"
       size="sm"
       onClick={toggleTheme}
-      className="gap-2 border-slate-300 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-none rounded-none "
+      className="gap-2 border-slate-300 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-none rounded-xl "
       title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
     >
       {theme === "dark" ? (
         <>
           <Sun className="h-4 w-4 text-[#C6FE1E]" />
-          <span className="text-xs font-bold">Light</span>
+          <span className="text-xs font-medium">Light</span>
         </>
       ) : (
         <>
           <Moon className="h-4 w-4 text-emerald-600" />
-          <span className="text-xs font-bold">Dark</span>
+          <span className="text-xs font-medium">Dark</span>
         </>
       )}
     </Button>

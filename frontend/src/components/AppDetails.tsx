@@ -145,15 +145,15 @@ function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocu
   const hasChildren = group.items.length > 0
 
   return (
-    <div className="flex flex-col mb-2 bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-none overflow-hidden transition-all">
+    <div className="flex flex-col mb-2 bg-secondary/20 border border-border rounded-xl overflow-hidden transition-all">
       {/* Header / Parent */}
       <div 
-        className={`relative flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 z-10 ${isOpen ? 'border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/40' : ''}`}
+        className={`relative flex items-center justify-between p-3 cursor-pointer hover:bg-accent/40 z-10 ${isOpen ? 'border-b border-border bg-accent/40' : ''}`}
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
         {/* Background Progress Bar */}
         <div 
-          className="absolute left-0 top-0 bottom-0 bg-[#558B2F]/10 dark:bg-primary/10 z-[-1] transition-all duration-500 ease-out" 
+          className="absolute left-0 top-0 bottom-0 bg-[#257a82]/10 dark:bg-primary/10 z-[-1] transition-all duration-500 ease-out" 
           style={{ width: `${widthPercent}%` }} 
         />
         
@@ -174,13 +174,13 @@ function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocu
             </div>
           )}
           
-          <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[400px]">
+          <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[400px]">
             {group.project}
           </span>
         </div>
         
         <div className="flex items-center gap-3 z-10">
-          <span className="font-mono font-bold text-xs text-[#558B2F] dark:text-primary whitespace-nowrap">
+          <span className=" font-medium text-xs text-[#257a82] dark:text-primary whitespace-nowrap">
             {formatDuration(group.totalDuration)}
           </span>
         </div>
@@ -195,9 +195,9 @@ function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocu
             return (
               <div key={idx} 
                    onClick={() => onSelectDocument({ project: group.project, document: item.label, label: item.label })}
-                   className="relative flex items-center justify-between p-2 pl-12 hover:bg-slate-100 dark:hover:bg-slate-800/30 cursor-pointer">
+                   className="relative flex items-center justify-between p-2 pl-12 hover:bg-accent/30 cursor-pointer">
                 <div 
-                  className="absolute left-0 top-0 bottom-0 bg-[#558B2F]/5 dark:bg-primary/5 z-[-1] transition-all duration-500 ease-out" 
+                  className="absolute left-0 top-0 bottom-0 bg-[#257a82]/5 dark:bg-primary/5 z-[-1] transition-all duration-500 ease-out" 
                   style={{ width: `${childWidthPercent}%` }} 
                 />
                 <div className="flex items-center gap-2 truncate">
@@ -212,7 +212,7 @@ function AccordionItem({ group, appId, maxDuration, formatDuration, onSelectDocu
                     {item.label}
                   </span>
                 </div>
-                <span className="font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                <span className=" text-[11px] text-slate-500 whitespace-nowrap">
                   {formatDuration(item.duration)}
                 </span>
               </div>
@@ -359,16 +359,16 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button variant="outline" onClick={onBack} className="gap-2 rounded-none">
+        <Button variant="outline" onClick={onBack} className="gap-2 rounded-xl">
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Button>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
+          <div className="flex items-center gap-1 bg-background p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium">
             <button
               onClick={() => setViewMode("graphs")}
-              className={`px-3 py-1.5 rounded-none transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                 viewMode === "graphs"
                   ? "bg-card text-slate-900 dark:text-slate-100 shadow-none"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
@@ -378,7 +378,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
             </button>
             <button
               onClick={() => setViewMode("documents")}
-              className={`px-3 py-1.5 rounded-none transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                 viewMode === "documents"
                   ? "bg-card text-slate-900 dark:text-slate-100 shadow-none"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
@@ -394,24 +394,24 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
       <Card className="border border-border bg-card shadow-none relative overflow-hidden">
         <div className="p-6">
           <div className="flex items-center gap-2 pb-2">
-            <Activity className="h-5 w-5 text-[#558B2F] dark:text-primary" />
-            <span className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <Activity className="h-5 w-5 text-[#257a82] dark:text-primary" />
+            <span className="text-sm font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
               Application Details
             </span>
           </div>
           <div className="flex items-center gap-4">
             {appIcon && appIcon !== "NONE" ? (
-              <img src={appIcon} alt={appName} className="w-14 h-14 rounded-none object-contain" />
+              <img src={appIcon} alt={appName} className="w-14 h-14 rounded-xl object-contain" />
             ) : (
               <div className="w-14 h-14 flex items-center justify-center text-slate-400 dark:text-slate-500">
                 <AppWindow className="w-12 h-12 stroke-1" />
               </div>
             )}
             <div>
-              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-medium text-slate-900 dark:text-slate-100 tracking-tight">
                 {appName || appId}
               </h2>
-              <Badge variant="outline" className="mt-2 font-mono">ID: {appId}</Badge>
+              <Badge variant="outline" className="mt-2 ">ID: {appId}</Badge>
             </div>
           </div>
         </div>
@@ -423,19 +423,19 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
           <>
             <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
               <div>
-                <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100">Usage Analytics</CardTitle>
+                <CardTitle className="text-xl font-medium text-slate-900 dark:text-slate-100">Usage Analytics</CardTitle>
                 <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Accumulated usage over time</CardDescription>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Timeframe Selector */}
-                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium">
                   {["today", "week", "month"].map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded-none transition-all uppercase text-[11px] font-black ${
+                      className={`px-3 py-1 rounded-xl transition-all uppercase text-[11px] font-medium ${
                         timeframe === tf
-                          ? "bg-[#558B2F] dark:bg-primary text-white dark:text-slate-950 shadow-none"
+                          ? "bg-[#257a82] dark:bg-primary text-white dark:text-slate-950 shadow-none"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
@@ -461,7 +461,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                       {
                         id: appId,
                         name: appName || appId,
-                        color: "#558B2F",
+                        color: "#257a82",
                         values: stats.map((s) => ({
                           date: s.label,
                           value: s.duration_seconds,
@@ -479,18 +479,18 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
           <>
             <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-4">
               <div>
-                <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100">Content Breakdown</CardTitle>
+                <CardTitle className="text-xl font-medium text-slate-900 dark:text-slate-100">Content Breakdown</CardTitle>
                 <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">Time spent on specific pages and documents</CardDescription>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <div className="flex items-center gap-1 bg-background p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium">
                   {["today", "week", "month"].map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded-none transition-all uppercase text-[11px] font-black ${
+                      className={`px-3 py-1 rounded-xl transition-all uppercase text-[11px] font-medium ${
                         timeframe === tf
-                          ? "bg-[#558B2F] dark:bg-primary text-white dark:text-slate-950 shadow-none"
+                          ? "bg-[#257a82] dark:bg-primary text-white dark:text-slate-950 shadow-none"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                       }`}
                     >
@@ -509,7 +509,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                     {/* D3 Icicle Chart for Project Hierarchy */}
                     {nestedDocs.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-xs font-black uppercase text-slate-500 tracking-wider">Interactive Project Flame Graph</div>
+                        <div className="text-xs font-medium uppercase text-slate-500 tracking-wider">Interactive Project Flame Graph</div>
                         <IcicleChart
                           height={260}
                           formatValue={formatDuration}
@@ -545,7 +545,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
       <GithubHeatmap appId={appId} appName={appName} />
 
       <Dialog open={!!activeDocument} onOpenChange={(open) => !open && setActiveDocument(null)}>
-        <DialogContent className="w-full max-w-[680px] max-h-[85vh] overflow-y-auto bg-card border border-border p-6 rounded-none shadow-2xl">
+        <DialogContent className="w-full max-w-[680px] max-h-[85vh] overflow-y-auto bg-card border border-border p-6 rounded-xl shadow-2xl">
           {activeDocument && (
             <DocumentTimeline
               appId={appId}
