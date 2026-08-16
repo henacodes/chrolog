@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { ArrowLeft, BarChart3, LineChart, History, Activity, CalendarIcon, ChevronRight, ChevronDown, AppWindow } from "lucide-react"
+import { useEffect, useState, useMemo } from "react"
+import { ArrowLeft, BarChart3, History, Activity, CalendarIcon, ChevronRight, ChevronDown, AppWindow } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,29 +17,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { format, parseISO } from "date-fns"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from "recharts"
-
-const COLORS = [
-  '#558B2F', // Primary Green
-  '#0d9488', // Teal
-  '#d97706', // Amber
-  '#475569', // Slate
-  '#94a3b8', // Light Slate
-];
+import { IcicleChart, IcicleNode } from "@/components/d3/IcicleChart"
+import { MultiLineChart } from "@/components/d3/MultiLineChart"
 
 import { GithubHeatmap } from "./GithubHeatmap"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -252,7 +231,7 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
   const [stats, setStats] = useState<AppUsageStat[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [timeframe, setTimeframe] = useState<string>("today") // today, week, month
-  const [chartType, setChartType] = useState<"bar" | "line">("bar")
+
   const [viewMode, setViewMode] = useState<"graphs" | "documents">("graphs")
   const [documents, setDocuments] = useState<AppUsageStat[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -298,6 +277,58 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
       fetchDocs()
     }
   }, [appId, timeframe, viewMode, refreshKey])
+
+  // Memoize grouped documents hierarchy at top level for React Rules of Hooks
+  const nestedDocs = useMemo(() => {
+    const map = new Map<string, { totalDuration: number; items: any[] }>()
+    documents.forEach((d) => {
+      let project = d.label
+      let docName = d.label
+
+      if (d.label.includes(" / ")) {
+        const parts = d.label.split(" / ")
+        project = parts[0].trim()
+        docName = parts.slice(1).join(" / ").trim()
+      }
+
+      if (!map.has(project)) {
+        map.set(project, { totalDuration: 0, items: [] })
+      }
+
+      const group = map.get(project)!
+      group.totalDuration += d.duration_seconds
+      if (project !== docName) {
+        group.items.push({ label: docName, duration: d.duration_seconds, url: d.url })
+      }
+    })
+
+    return Array.from(map.entries())
+      .map(([project, data]) => ({
+        project,
+        totalDuration: data.totalDuration,
+        items: data.items.sort((a, b) => b.duration - a.duration),
+      }))
+      .sort((a, b) => b.totalDuration - a.totalDuration)
+  }, [documents])
+
+  const maxDuration = useMemo(
+    () => (nestedDocs.length > 0 ? Math.max(...nestedDocs.map((d) => d.totalDuration)) : 0),
+    [nestedDocs]
+  )
+
+  const icicleData = useMemo<IcicleNode>(
+    () => ({
+      name: appName || appId,
+      children: nestedDocs.map((g) => ({
+        name: g.project,
+        children:
+          g.items.length > 0
+            ? g.items.map((i) => ({ name: i.label, value: i.duration }))
+            : [{ name: g.project, value: g.totalDuration }],
+      })),
+    }),
+    [nestedDocs, appId, appName]
+  )
 
   // (Session fetching removed)
 
@@ -413,66 +444,34 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
                   ))}
                 </div>
 
-                {/* Chart Type Selector */}
-                <div className="flex items-center gap-1 bg-background p-1 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold">
-                  <button
-                    onClick={() => setChartType("bar")}
-                    className={`p-1.5 rounded-none transition-all ${chartType === "bar" ? "bg-card shadow-none text-[#558B2F] dark:text-primary" : "text-slate-500"}`}
-                    title="Bar Chart"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setChartType("line")}
-                    className={`p-1.5 rounded-none transition-all ${chartType === "line" ? "bg-card shadow-none text-[#558B2F] dark:text-primary" : "text-slate-500"}`}
-                    title="Line Chart"
-                  >
-                    <LineChart className="h-4 w-4" />
-                  </button>
-                </div>
               </div>
             </CardHeader>
 
             <CardContent>
               {isLoading ? (
-                <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold animate-pulse">Loading analytics...</div>
+                <div className="h-[320px] flex items-center justify-center text-slate-500 font-semibold animate-pulse">Loading analytics...</div>
               ) : stats.length > 0 ? (
-                <div className="h-[400px] w-full mt-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    {chartType === "bar" ? (
-                      <BarChart data={stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                        <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => formatDuration(val)} />
-                        <Tooltip 
-                          cursor={{ fill: 'transparent' }}
-                          contentStyle={{ backgroundColor: '#1C1F23', borderColor: '#2B3036', borderRadius: '0.75rem', color: '#F8FAFC', fontWeight: 'bold' }}
-                          formatter={formatTooltip}
-                        />
-                        <Bar dataKey="duration_seconds" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    ) : (
-                      <AreaChart data={stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorAppArea" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#558B2F" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#558B2F" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                        <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => formatDuration(val)} />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#1C1F23', borderColor: '#2B3036', borderRadius: '0.75rem', color: '#F8FAFC', fontWeight: 'bold' }}
-                          formatter={formatTooltip}
-                        />
-                        <Area type="monotone" dataKey="duration_seconds" stroke="#558B2F" strokeWidth={3} fillOpacity={1} fill="url(#colorAppArea)" />
-                      </AreaChart>
-                    )}
-                  </ResponsiveContainer>
+                <div className="w-full mt-4">
+                  <MultiLineChart
+                    title={`${appName || appId} Usage`}
+                    subtitle={`Accumulated duration over timeframe (${timeframe})`}
+                    height={300}
+                    formatValue={formatDuration}
+                    series={[
+                      {
+                        id: appId,
+                        name: appName || appId,
+                        color: "#558B2F",
+                        values: stats.map((s) => ({
+                          date: s.label,
+                          value: s.duration_seconds,
+                        })),
+                      },
+                    ]}
+                  />
                 </div>
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold">No usage data for this timeframe.</div>
+                <div className="h-[320px] flex items-center justify-center text-slate-500 font-semibold">No usage data for this timeframe.</div>
               )}
             </CardContent>
           </>
@@ -505,97 +504,34 @@ export function AppDetails({ appId, appName, appIcon, refreshKey = 0, onBack }: 
               {isLoading ? (
                 <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold animate-pulse">Loading content stats...</div>
               ) : documents.length > 0 ? (
-                <div className="w-full mt-4 space-y-2 max-h-[600px] overflow-y-auto pr-2">
-                  {(() => {
-                    // Group documents by project
-                    const map = new Map<string, { totalDuration: number, items: any[] }>()
-                    documents.forEach(d => {
-                      let project = d.label
-                      let docName = d.label
-                      
-                      if (d.label.includes(" / ")) {
-                        const parts = d.label.split(" / ")
-                        project = parts[0].trim()
-                        docName = parts.slice(1).join(" / ").trim()
-                      }
-                      
-                      if (!map.has(project)) {
-                        map.set(project, { totalDuration: 0, items: [] })
-                      }
-                      
-                      const group = map.get(project)!
-                      group.totalDuration += d.duration_seconds
-                      // Prevent duplicating if project == docName
-                      if (project !== docName) {
-                        group.items.push({ label: docName, duration: d.duration_seconds, url: d.url })
-                      }
-                    })
-                    
-                    const nestedDocs = Array.from(map.entries()).map(([project, data]) => ({
-                      project,
-                      totalDuration: data.totalDuration,
-                      items: data.items.sort((a, b) => b.duration - a.duration)
-                    })).sort((a, b) => b.totalDuration - a.totalDuration)
-
-                    const maxDuration = Math.max(...nestedDocs.map(d => d.totalDuration))
-
-                    return (
-                      <div className="flex flex-col gap-6">
-                        {/* Project Donut Chart */}
-                        {nestedDocs.length > 0 && (
-                          <div className="h-[220px] flex flex-col items-center justify-center relative bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-none p-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={nestedDocs.slice(0, 5)}
-                                  cx="50%"
-                                  cy="45%"
-                                  innerRadius={50}
-                                  outerRadius={70}
-                                  paddingAngle={2}
-                                  dataKey="totalDuration"
-                                  nameKey="project"
-                                  stroke="none"
-                                >
-                                  {nestedDocs.slice(0, 5).map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Tooltip 
-                                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px' }}
-                                  itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', fontSize: '12px' }}
-                                  formatter={(value: any, name: any) => [formatDuration(Number(value)), name]}
-                                />
-                                <Legend 
-                                  verticalAlign="bottom" 
-                                  height={30} 
-                                  iconType="circle"
-                                  wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', color: 'hsl(var(--muted-foreground))' }}
-                                />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="absolute inset-0 top-[-5%] flex flex-col items-center justify-center pointer-events-none">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Top Projects</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Accordion List */}
-                        <div className="space-y-2">
-                          {nestedDocs.map((group, idx) => (
-                            <AccordionItem 
-                              key={idx} 
-                              group={group} 
-                              appId={appId} 
-                              maxDuration={maxDuration} 
-                              formatDuration={formatDuration} 
-                              onSelectDocument={setActiveDocument}
-                            />
-                          ))}
-                        </div>
+                <div className="w-full mt-4 space-y-6 max-h-[700px] overflow-y-auto pr-2">
+                  <div className="flex flex-col gap-6">
+                    {/* D3 Icicle Chart for Project Hierarchy */}
+                    {nestedDocs.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs font-black uppercase text-slate-500 tracking-wider">Interactive Project Flame Graph</div>
+                        <IcicleChart
+                          height={260}
+                          formatValue={formatDuration}
+                          data={icicleData}
+                        />
                       </div>
-                    )
-                  })()}
+                    )}
+
+                    {/* Accordion List */}
+                    <div className="space-y-2">
+                      {nestedDocs.map((group, idx) => (
+                        <AccordionItem 
+                          key={idx} 
+                          group={group} 
+                          appId={appId} 
+                          maxDuration={maxDuration} 
+                          formatDuration={formatDuration} 
+                          onSelectDocument={setActiveDocument}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="h-[400px] flex items-center justify-center text-slate-500 font-semibold">No detailed content history found.</div>

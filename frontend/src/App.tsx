@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Play, Pause, Activity, ShieldCheck, Cpu, BarChart3, RefreshCw, Zap, AppWindow, LineChart as LineChartIcon, Globe, PlayCircle, PauseCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { AppDetails } from "@/components/AppDetails"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { IcicleChart, IcicleNode } from "@/components/d3/IcicleChart"
+import { MultiLineChart, LineSeriesData } from "@/components/d3/MultiLineChart"
 import { format, parseISO } from "date-fns"
 import "./style.css"
 
@@ -93,6 +94,16 @@ export default function App() {
   const [activeAppId, setActiveAppId] = useState<string | null>(null)
   const [activeAppName, setActiveAppName] = useState<string>("")
   const [iconCache, setIconCache] = useState<Record<string, string>>({})
+
+  const globalIcicleData = useMemo<IcicleNode>(() => {
+    return {
+      name: "All Activity",
+      children: appStats.map((stat) => ({
+        name: stat.app_name || stat.app_id,
+        value: stat.total_duration_seconds,
+      })),
+    }
+  }, [appStats])
 
   const fetchData = async () => {
     setIsRefreshing(true)
@@ -568,96 +579,51 @@ export default function App() {
                 )}
               </CardContent>
             </Card>
-            {/* Global Analytics Card */}
-            <Card className="border border-border bg-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                  <LineChartIcon className="h-5 w-5 text-primary dark:text-primary" />
-                  Usage Trend
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-                  {/* Area Chart: 7-Day Trend */}
-                  <div className="lg:col-span-2 h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trendStats} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#558B2F" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#558B2F" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                        <XAxis 
-                          dataKey="label" 
-                          tickFormatter={(val) => {
-                            try { return format(parseISO(val), 'MMM d') }
-                            catch { return val }
-                          }}
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fontSize: 10, fill: '#64748b' }} 
-                          dy={10}
-                        />
-                        <RechartsTooltip 
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                          labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
-                          formatter={(value: any) => [formatDuration(Number(value)), "Tracked"]}
-                          labelFormatter={(label) => {
-                            try { return format(parseISO(label as string), 'EEEE, MMMM d') }
-                            catch { return label }
-                          }}
-                        />
-                        <Area type="monotone" dataKey="duration_seconds" stroke="#558B2F" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  
-                  {/* Donut Chart: App Composition */}
-                  <div className="h-[220px] flex flex-col items-center justify-center relative">
-                    {appStats.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={appStats.slice(0, 5)}
-                            cx="50%"
-                            cy="45%"
-                            innerRadius={50}
-                            outerRadius={70}
-                            paddingAngle={2}
-                            dataKey="total_duration_seconds"
-                            nameKey="app_name"
-                            stroke="none"
-                          >
-                            {appStats.slice(0, 5).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <RechartsTooltip 
-                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0px' }}
-                            itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', fontSize: '12px' }}
-                            formatter={(value: any, name: any) => [formatDuration(Number(value)), name]}
-                          />
-                          <Legend 
-                            verticalAlign="bottom" 
-                            height={30} 
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', color: 'hsl(var(--muted-foreground))' }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="text-sm text-slate-500 font-medium">No data</div>
-                    )}
-                    <div className="absolute inset-0 top-[-5%] flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Top Apps</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Global Analytics Section with D3 */}
+            <div className="space-y-6">
+              {/* D3 MultiLineChart: Usage Trend Comparison */}
+              {trendStats.length > 0 && (
+                <MultiLineChart
+                  title="Daily Usage Trend"
+                  subtitle="Tracked duration over time grouped by day"
+                  height={260}
+                  formatValue={formatDuration}
+                  series={[
+                    {
+                      id: "total_tracked",
+                      name: "Total Active Focus",
+                      color: "#558B2F",
+                      values: trendStats.map((t) => ({
+                        date: t.label,
+                        value: t.duration_seconds,
+                      })),
+                    },
+                  ]}
+                />
+              )}
+
+              {/* D3 Icicle Chart: App Hierarchy Breakdown */}
+              {appStats.length > 0 && (
+                <Card className="border border-border bg-card">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                      <BarChart3 className="h-5 w-5 text-primary dark:text-primary" />
+                      App Composition Hierarchy (Flame Graph)
+                    </CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400 font-medium">
+                      Click any block to zoom into hierarchical activity
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <IcicleChart
+                      height={240}
+                      formatValue={formatDuration}
+                      data={globalIcicleData}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
           </div>
         )}
