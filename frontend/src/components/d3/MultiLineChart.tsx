@@ -135,10 +135,14 @@ export function MultiLineChart({
 
     // Background Gridlines
     const yAxisGrid = d3.axisLeft(yScale).ticks(5).tickSize(-innerWidth).tickFormat(() => "")
-    g.append("g")
+    const gridGroup = g.append("g")
       .attr("class", "grid")
       .call(yAxisGrid)
-      .selectAll("line")
+
+    // Remove the domain line (the top horizontal border line)
+    gridGroup.select(".domain").remove()
+
+    gridGroup.selectAll("line")
       .attr("stroke", "#334155")
       .attr("stroke-opacity", 0.25)
 
@@ -300,7 +304,7 @@ export function MultiLineChart({
   }, [series, height, hiddenSeries, formatValue])
 
   return (
-    <div className="w-full relative bg-card border border-border rounded-xl p-4 space-y-3" ref={containerRef}>
+    <div className="w-full relative p-4 space-y-3" ref={containerRef}>
       {(title || subtitle) && (
         <div className="flex flex-col space-y-0.5">
           {title && <h3 className="text-base font-medium tracking-tight text-foreground">{title}</h3>}

@@ -428,9 +428,15 @@ func (e *Engine) GetCategoryStats(ctx context.Context, timeframe string) ([]stor
 
 func (e *Engine) ToggleTracking() bool {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.paused = !e.paused
-	return !e.paused
+	isPaused := e.paused
+	e.mu.Unlock()
+
+	if isPaused {
+		e.flushActiveSession(context.Background())
+	}
+
+	return !isPaused
 }
 
 func (e *Engine) IsPaused() bool {

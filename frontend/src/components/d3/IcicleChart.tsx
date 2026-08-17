@@ -305,7 +305,7 @@ export function IcicleChart({
       </div>
 
       {/* SVG */}
-      <div className="w-full overflow-hidden bg-card border border-border rounded-xl">
+      <div className="w-full overflow-hidden rounded-xl">
         <svg ref={svgRef} className="w-full block" />
       </div>
     </div>
